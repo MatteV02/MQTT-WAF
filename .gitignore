@@ -1,0 +1,4 @@
+.vscode/
+compile_flags.txt
+**/*.so
+**/*.o

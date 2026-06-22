@@ -1,0 +1,3 @@
+ext_broker_host: "127.0.0.1"
+ext_broker_port: 1883
+ext_client_id: "broker_forwarder_plugin"

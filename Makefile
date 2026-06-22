@@ -1,11 +1,11 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -O2 -fPIC -Iinclude
 LDFLAGS = -shared
-LDLIBS = -lmosquitto
+LDLIBS = -lmosquitto -lcyaml
 
 TARGET = waf.so
 
-SRCS = src/plugin.c src/message_logger.c src/message_forwarder.c
+SRCS = src/plugin.c src/message_logger.c src/message_forwarder.c src/settings.c
 OBJS = $(SRCS:.c=.o)
 
 all: $(TARGET)

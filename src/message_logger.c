@@ -2,8 +2,14 @@
 
 FILE *log_file = NULL;
 
+int start_logger() {
+    log_file = fopen("/tmp/mqtt_packets.log", "a");
+
+    return log_file ? 0 : -1;
+}
+
 void log_message(struct mosquitto_evt_message* msg) {
-if (log_file && msg && msg->topic) {
+    if (log_file && msg && msg->topic) {
         fprintf(log_file, "Topic: %s | QoS: %d | Retain: %d | Payload Length: %d\n", 
                 msg->topic, msg->qos, msg->retain, msg->payloadlen);
         
@@ -17,5 +23,13 @@ if (log_file && msg && msg->topic) {
         
         fprintf(log_file, "--------------------------------------------------\n");
         fflush(log_file); // Flush immediately to ensure data is written to disk
+    }
+}
+
+void stop_logger() {
+    // Safely close the file handle
+    if (log_file) {
+        fclose(log_file);
+        log_file = NULL;
     }
 }

@@ -5,7 +5,7 @@ LDLIBS = -lmosquitto
 
 TARGET = waf.so
 
-SRCS = src/plugin.c src/message_logger.c
+SRCS = src/plugin.c src/message_logger.c src/message_forwarder.c
 OBJS = $(SRCS:.c=.o)
 
 all: $(TARGET)

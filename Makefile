@@ -5,7 +5,7 @@ LDLIBS = -lmosquitto -lcyaml
 
 TARGET = waf.so
 
-SRCS = src/plugin.c src/message_logger.c src/message_forwarder.c src/settings.c src/subscription_logic.c
+SRCS = src/plugin.c src/message_logger.c src/message_forwarder.c src/settings.c src/subscription_logic.c src/waf_rules_parse.c
 OBJS = $(SRCS:.c=.o)
 
 all: $(TARGET)

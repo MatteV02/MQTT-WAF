@@ -7,12 +7,16 @@
 #include "message_forwarder.h"
 #include "settings.h"
 #include "subscription_logic.h"
+#include "waf_rules_parse.h"
 
 static mosquitto_plugin_id_t *plugin_id = NULL;
 static struct mosquitto *ext_client = NULL;
 
 // Global pointer for our parsed settings
 static struct settings *plugin_config = NULL;
+
+// Global pointer for our WAF rules
+static struct waf_config *waf_rules = NULL;
 
 /* This callback is triggered every time a PUBLISH message flows through the broker */
 int callback_message(int event, void *event_data, void *userdata) {
@@ -50,12 +54,14 @@ int mosquitto_plugin_init(mosquitto_plugin_id_t *identifier, void **user_data, s
     
     // 1. Determine the path to the YAML config file
     const char *config_path = "/etc/mosquitto/plugin_config.yaml"; // Default fallback path
+    const char *waf_path = "/etc/mosquitto/waf_rules.yaml";        // WAF fallback path
     
     // Look for a custom path passed from mosquitto.conf via `plugin_opt_config_path ...`
     for (int i = 0; i < opt_count; i++) {
         if (strcmp(opts[i].key, "config_path") == 0) {
             config_path = opts[i].value;
-            break;
+        } else if (strcmp(opts[i].key, "waf_rules_path") == 0) {
+            waf_path = opts[i].value;
         }
     }
 
@@ -66,6 +72,14 @@ int mosquitto_plugin_init(mosquitto_plugin_id_t *identifier, void **user_data, s
         return MOSQ_ERR_UNKNOWN;
     }
 
+    waf_rules = load_waf_rules(waf_path);
+    if (!waf_rules) {
+        mosquitto_log_printf(MOSQ_LOG_ERR, "WAF Plugin: FAILED to load WAF rules at %s. Aborting start to maintain security.", waf_path);
+        free_settings(plugin_config);
+        plugin_config = NULL;
+        return MOSQ_ERR_UNKNOWN; // Reject plugin load if WAF fails (fail-closed)
+    }
+
     // 3. Initialize the logger
     int status = start_logger();
     if (status) {
@@ -74,6 +88,8 @@ int mosquitto_plugin_init(mosquitto_plugin_id_t *identifier, void **user_data, s
         plugin_config = NULL;
         return MOSQ_ERR_UNKNOWN;
     }
+
+    print_waf_rules(waf_rules);
 
     // 4. Initialize the forwarder using parsed YAML settings
     ext_client = start_forwarder(
@@ -108,6 +124,12 @@ int mosquitto_plugin_cleanup(void *user_data, struct mosquitto_opt *opts, int op
     if (plugin_config) {
         free_settings(plugin_config);
         plugin_config = NULL;
+    }
+
+    // Clean up our WAF allocations
+    if (waf_rules) {
+        free_waf_rules(waf_rules);
+        waf_rules = NULL;
     }
     
     mosquitto_log_printf(MOSQ_LOG_INFO, "Logger Plugin: Cleaned up.");

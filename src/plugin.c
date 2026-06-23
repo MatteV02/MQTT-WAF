@@ -84,7 +84,8 @@ int mosquitto_plugin_init(mosquitto_plugin_id_t *identifier, void **user_data, s
     int status = start_logger();
     if (status) {
         mosquitto_log_printf(MOSQ_LOG_ERR, "Logger Plugin: Cannot open /tmp/mqtt_packets.log");
-        free_settings(plugin_config); // Prevent memory leak on abort
+        free_settings(plugin_config);
+        free_waf_rules(waf_rules);
         plugin_config = NULL;
         return MOSQ_ERR_UNKNOWN;
     }
@@ -100,6 +101,7 @@ int mosquitto_plugin_init(mosquitto_plugin_id_t *identifier, void **user_data, s
     
     if (!ext_client) {
         mosquitto_log_printf(MOSQ_LOG_ERR, "Logger Plugin: Failed to init connection to external broker");
+        // TODO add a background retry logic to use the local broker as cache and then send message to the remote broker
     }
 
     init_subscription_logic(plugin_id, ext_client);

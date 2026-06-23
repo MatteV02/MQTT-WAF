@@ -50,6 +50,22 @@ int callback_acl_check(int event, void *event_data, void *userdata) {
     // 3. Delegate to Bridge Logic ONLY if it's a valid, approved subscription
     if (acl->access == MOSQ_ACL_SUBSCRIBE) {
         forward_subscription(topic);
+    } else if (acl->access == MOSQ_ACL_WRITE) {
+        
+        struct mosquitto_evt_message msg = {
+            .client = acl->client,
+            .topic = (char*)acl->topic,
+            .payload = (char*)acl->payload,
+            .payloadlen = acl->payloadlen,
+            .qos = acl->qos,
+            .retain = acl->retain
+        };
+
+        log_message(&msg);
+
+        if (ext_client) {
+            forward_message(ext_client, &msg);
+        }
     }
 
     // 4. Finally, grant actual access in the broker
@@ -60,18 +76,6 @@ int callback_acl_check(int event, void *event_data, void *userdata) {
 /* Can be deactivated */
 int callback_message(int event, void *event_data, void *userdata) {
     struct mosquitto_evt_message *msg = event_data;
-
-    // Messages injected via plugin (using mosquitto_broker_publish_copy with a NULL client) 
-    // will have msg->client as NULL. We skip forwarding these to avoid sending them back outside.
-    if (msg->client == NULL) {
-        return MOSQ_ERR_SUCCESS; 
-    }
-
-    log_message(msg);
-
-    if (ext_client) {
-        forward_message(ext_client, msg);
-    }
     
     // Always return SUCCESS so the broker continues processing the message
     return MOSQ_ERR_SUCCESS;

@@ -20,7 +20,7 @@ int evaluate_topic_rules(const char *client_id, int access, const char *topic, s
         int reg_match = regexec(&regex, client_id, 0, NULL, 0);
         regfree(&regex);
         
-        if (reg_match != 0) continue; // Client ID didn't match
+        if (reg_match) continue; // Client ID didn't match
 
         // B. Check Topic Match based on the Access Type (Publish vs Subscribe)
         bool topic_matched = false;

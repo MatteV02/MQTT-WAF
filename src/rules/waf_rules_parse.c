@@ -3,7 +3,7 @@
 #include <stdarg.h>
 #include <cyaml/cyaml.h>
 
-#include "waf_rules_parse.h"
+#include "rules/waf_rules_parse.h"
 
 /* ---------------------------------------------------------
  * LIBCYAML SCHEMAS

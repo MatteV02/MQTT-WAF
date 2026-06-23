@@ -3,11 +3,11 @@
 #include <mosquitto_plugin.h>
 #include <mosquitto.h>
 
-#include "message_logger.h"
-#include "message_forwarder.h"
-#include "settings.h"
-#include "subscription_logic.h"
-#include "waf_rules_parse.h"
+#include "bridge/message_logger.h"
+#include "bridge/message_forwarder.h"
+#include "bridge/settings.h"
+#include "bridge/subscription_logic.h"
+#include "rules/waf_rules_parse.h"
 
 static mosquitto_plugin_id_t *plugin_id = NULL;
 static struct mosquitto *ext_client = NULL;

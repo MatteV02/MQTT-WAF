@@ -1,4 +1,4 @@
-#include "subscription_logic.h"
+#include "bridge/subscription_logic.h"
 
 // Global references for this module
 static struct mosquitto *g_ext_client = NULL;

@@ -1,4 +1,4 @@
-#include "message_logger.h"
+#include "bridge/message_logger.h"
 
 FILE *log_file = NULL;
 

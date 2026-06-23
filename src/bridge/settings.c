@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <cyaml/cyaml.h>
-#include "settings.h"
+#include "bridge/settings.h"
 
 #include <stdarg.h> // Required for va_list
 

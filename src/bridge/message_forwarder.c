@@ -1,4 +1,4 @@
-#include "message_forwarder.h"
+#include "bridge/message_forwarder.h"
 
 #include <mosquitto.h>
 #include <string.h>

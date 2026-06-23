@@ -1,19 +1,12 @@
 #include "bridge/subscription_logic.h"
 
-// Global references for this module
 static struct mosquitto *g_ext_client = NULL;
 static mosquitto_plugin_id_t *g_plugin_id = NULL;
 
-/* * Callback triggered when the external client receives a message.
- * We inject this message into the local broker.
- */
+/* Callback triggered when the external client receives a message. */
 static void on_ext_client_message(struct mosquitto *client, void *userdata, const struct mosquitto_message *msg) {
-    if (!msg || !msg->topic) {
-        return;
-    }
+    if (!msg || !msg->topic) return;
 
-    // Publish the incoming external message directly to the local broker.
-    // Using NULL for clientid indicates it was injected by the broker/plugin natively.
     mosquitto_broker_publish_copy(
         NULL, 
         msg->topic,
@@ -25,56 +18,30 @@ static void on_ext_client_message(struct mosquitto *client, void *userdata, cons
     );
 }
 
-/* * Plugin callback triggered during ACL checks.
- * We use it to intercept local subscription requests.
+/* * Helper function to be called by the WAF ONLY AFTER a subscription is approved.
  */
-static int callback_acl_check(int event, void *event_data, void *userdata) {
-    struct mosquitto_evt_acl_check *ed = (struct mosquitto_evt_acl_check *)event_data;
-
-    // Check if the ACL request is specifically for a subscription attempt
-    if (ed->access == MOSQ_ACL_SUBSCRIBE) {
-        if (g_ext_client && ed->topic) {
-            // Subscribe the external client to the identical topic locally requested
-            mosquitto_subscribe(g_ext_client, NULL, ed->topic, 0);
-            
-            mosquitto_log_printf(MOSQ_LOG_INFO, 
-                "Subscription Forwarder: Forwarded subscription for topic '%s' to external broker.", 
-                ed->topic);
-        }
+void forward_subscription(const char *topic) {
+    if (g_ext_client && topic) {
+        mosquitto_subscribe(g_ext_client, NULL, topic, 0);
+        mosquitto_log_printf(MOSQ_LOG_INFO, 
+            "Subscription Forwarder: Forwarded WAF-approved subscription for topic '%s'", 
+            topic);
     }
-
-    // Always return SUCCESS so we don't interfere with the actual ACL evaluation
-    return MOSQ_ERR_SUCCESS;
 }
 
-/* * Initialize the module by registering callbacks
- */
+/* Initialize the module (Notice we no longer register the ACL callback here) */
 int init_subscription_logic(mosquitto_plugin_id_t *plugin_id, struct mosquitto *ext_client) {
     g_plugin_id = plugin_id;
     g_ext_client = ext_client;
 
     if (g_ext_client) {
-        // Set the callback to process messages arriving from the external broker
         mosquitto_message_callback_set(g_ext_client, on_ext_client_message);
     }
-
-    // Register the ACL check event to catch subscriptions on the local broker
-    return mosquitto_callback_register(
-        g_plugin_id, 
-        MOSQ_EVT_ACL_CHECK, 
-        callback_acl_check, 
-        NULL, 
-        NULL
-    );
+    return MOSQ_ERR_SUCCESS; 
 }
 
-/* * Clean up the callbacks
- */
+/* Clean up */
 int cleanup_subscription_logic(mosquitto_plugin_id_t *plugin_id) {
-    return mosquitto_callback_unregister(
-        plugin_id, 
-        MOSQ_EVT_ACL_CHECK, 
-        callback_acl_check, 
-        NULL
-    );
+    // Nothing to unregister anymore
+    return MOSQ_ERR_SUCCESS;
 }

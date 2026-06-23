@@ -8,6 +8,8 @@
 // Initializes the subscription forwarding logic
 int init_subscription_logic(mosquitto_plugin_id_t *plugin_id, struct mosquitto *ext_client);
 
+void forward_subscription(const char *topic);
+
 // Cleans up the registered callbacks
 int cleanup_subscription_logic(mosquitto_plugin_id_t *plugin_id);
 

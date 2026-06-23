@@ -8,6 +8,7 @@
 #include "bridge/settings.h"
 #include "bridge/subscription_logic.h"
 #include "rules/waf_rules_parse.h"
+#include "rules/firewall_engine.h"
 
 static mosquitto_plugin_id_t *plugin_id = NULL;
 static struct mosquitto *ext_client = NULL;
@@ -18,7 +19,45 @@ static struct settings *plugin_config = NULL;
 // Global pointer for our WAF rules
 static struct waf_config *waf_rules = NULL;
 
+int callback_acl_check(int event, void *event_data, void *userdata) {
+    struct mosquitto_evt_acl_check *acl = event_data;
+
+    // Allow locally injected plugins to bypass WAF logic
+    if (acl->client == NULL) {
+        return MOSQ_ERR_SUCCESS; 
+    }
+
+    const char *client_id = mosquitto_client_id(acl->client);
+    const char *topic = acl->topic ? acl->topic : "UNKNOWN";
+
+    // 1. Run the request through the WAF engine FIRST
+    int waf_decision = firewall_engine(acl, waf_rules);
+
+    if (waf_decision == 0) {
+        // WAF Denied: Destroy the packet immediately.
+        mosquitto_log_printf(MOSQ_LOG_WARNING, 
+            "WAF [DENY]: Dropped packet (Access: %d) from Client: '%s' on Topic: '%s'", 
+            acl->access, client_id, topic);
+            
+        return MOSQ_ERR_ACL_DENIED; 
+    } 
+    
+    // 2. WAF Approved
+    mosquitto_log_printf(MOSQ_LOG_INFO, 
+        "WAF [ALLOW]: Approved packet (Access: %d) from Client: '%s' on Topic: '%s'", 
+        acl->access, client_id, topic);
+        
+    // 3. Delegate to Bridge Logic ONLY if it's a valid, approved subscription
+    if (acl->access == MOSQ_ACL_SUBSCRIBE) {
+        forward_subscription(topic);
+    }
+
+    // 4. Finally, grant actual access in the broker
+    return MOSQ_ERR_SUCCESS; 
+}
+
 /* This callback is triggered every time a PUBLISH message flows through the broker */
+/* Can be deactivated */
 int callback_message(int event, void *event_data, void *userdata) {
     struct mosquitto_evt_message *msg = event_data;
 
@@ -27,7 +66,7 @@ int callback_message(int event, void *event_data, void *userdata) {
     if (msg->client == NULL) {
         return MOSQ_ERR_SUCCESS; 
     }
-    
+
     log_message(msg);
 
     if (ext_client) {
@@ -109,12 +148,15 @@ int mosquitto_plugin_init(mosquitto_plugin_id_t *identifier, void **user_data, s
     mosquitto_log_printf(MOSQ_LOG_INFO, "Logger Plugin: Initialized successfully using %s", config_path);
 
     // Register the callback to intercept published messages
-    return mosquitto_callback_register(plugin_id, MOSQ_EVT_MESSAGE, callback_message, NULL, NULL);
+    mosquitto_callback_register(plugin_id, MOSQ_EVT_ACL_CHECK, callback_acl_check, NULL, NULL);
+    mosquitto_callback_register(plugin_id, MOSQ_EVT_MESSAGE, callback_message, NULL, NULL);
+    return MOSQ_ERR_SUCCESS;
 }
 
 /* Called when the broker is shutting down */
 int mosquitto_plugin_cleanup(void *user_data, struct mosquitto_opt *opts, int opt_count) {
     // Unregister the callback
+    mosquitto_callback_unregister(plugin_id, MOSQ_EVT_ACL_CHECK, callback_acl_check, NULL);
     mosquitto_callback_unregister(plugin_id, MOSQ_EVT_MESSAGE, callback_message, NULL);
 
     cleanup_subscription_logic(plugin_id);

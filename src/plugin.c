@@ -5,7 +5,8 @@
 
 #include "message_logger.h"
 #include "message_forwarder.h"
-#include "settings.h" // Added our new parser header
+#include "settings.h"
+#include "subscription_logic.h"
 
 static mosquitto_plugin_id_t *plugin_id = NULL;
 static struct mosquitto *ext_client = NULL;
@@ -16,6 +17,12 @@ static struct settings *plugin_config = NULL;
 /* This callback is triggered every time a PUBLISH message flows through the broker */
 int callback_message(int event, void *event_data, void *userdata) {
     struct mosquitto_evt_message *msg = event_data;
+
+    // Messages injected via plugin (using mosquitto_broker_publish_copy with a NULL client) 
+    // will have msg->client as NULL. We skip forwarding these to avoid sending them back outside.
+    if (msg->client == NULL) {
+        return MOSQ_ERR_SUCCESS; 
+    }
     
     log_message(msg);
 
@@ -79,6 +86,8 @@ int mosquitto_plugin_init(mosquitto_plugin_id_t *identifier, void **user_data, s
         mosquitto_log_printf(MOSQ_LOG_ERR, "Logger Plugin: Failed to init connection to external broker");
     }
 
+    init_subscription_logic(plugin_id, ext_client);
+
     mosquitto_log_printf(MOSQ_LOG_INFO, "Logger Plugin: Initialized successfully using %s", config_path);
 
     // Register the callback to intercept published messages
@@ -89,6 +98,8 @@ int mosquitto_plugin_init(mosquitto_plugin_id_t *identifier, void **user_data, s
 int mosquitto_plugin_cleanup(void *user_data, struct mosquitto_opt *opts, int opt_count) {
     // Unregister the callback
     mosquitto_callback_unregister(plugin_id, MOSQ_EVT_MESSAGE, callback_message, NULL);
+
+    cleanup_subscription_logic(plugin_id);
 
     stop_forwarder(ext_client);
     stop_logger();

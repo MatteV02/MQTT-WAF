@@ -6,11 +6,11 @@
 #include <mosquitto.h>
 
 // Initializes the subscription forwarding logic
-int init_subscription_logic(mosquitto_plugin_id_t *plugin_id, struct mosquitto *ext_client);
+int init_subscription_logic(struct mosquitto *client);
 
-void forward_subscription(const char *topic);
+void forward_subscription(struct mosquitto *client, const char *topic);
 
 // Cleans up the registered callbacks
-int cleanup_subscription_logic(mosquitto_plugin_id_t *plugin_id);
+int cleanup_subscription_logic(struct mosquitto *client);
 
 #endif // SUBSCRIPTION_LOGIC_H

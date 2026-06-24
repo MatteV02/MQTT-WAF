@@ -49,7 +49,9 @@ int callback_acl_check(int event, void *event_data, void *userdata) {
         
     // 3. Delegate to Bridge Logic ONLY if it's a valid, approved subscription
     if (acl->access == MOSQ_ACL_SUBSCRIBE) {
-        forward_subscription(topic);
+        if (ext_client) {
+            forward_subscription(ext_client, topic);
+        }
     } else if (acl->access == MOSQ_ACL_WRITE) {
         
         struct mosquitto_evt_message msg = {
@@ -147,7 +149,7 @@ int mosquitto_plugin_init(mosquitto_plugin_id_t *identifier, void **user_data, s
         // TODO add a background retry logic to use the local broker as cache and then send message to the remote broker
     }
 
-    init_subscription_logic(plugin_id, ext_client);
+    init_subscription_logic(ext_client);
 
     mosquitto_log_printf(MOSQ_LOG_INFO, "Logger Plugin: Initialized successfully using %s", config_path);
 
@@ -163,7 +165,7 @@ int mosquitto_plugin_cleanup(void *user_data, struct mosquitto_opt *opts, int op
     mosquitto_callback_unregister(plugin_id, MOSQ_EVT_ACL_CHECK, callback_acl_check, NULL);
     mosquitto_callback_unregister(plugin_id, MOSQ_EVT_MESSAGE, callback_message, NULL);
 
-    cleanup_subscription_logic(plugin_id);
+    cleanup_subscription_logic(ext_client);
 
     stop_forwarder(ext_client);
     stop_logger();

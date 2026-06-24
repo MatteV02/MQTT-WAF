@@ -18,10 +18,6 @@ TARGET = $(BUILD_DIR)/waf.so
 SRCS = $(shell find src -type f -name '*.c')
 OBJS = $(patsubst %.c,$(OBJ_DIR)/%.o,$(SRCS))
 
-# Autodiscover test files and map them to test executables
-TEST_SRCS = $(shell find test -type f -name '*.c')
-TEST_BINS = $(patsubst test/%.c,$(TEST_BUILD_DIR)/%,$(TEST_SRCS))
-
 all: $(TARGET)
 
 # Rule to link the final plugin target (.so)

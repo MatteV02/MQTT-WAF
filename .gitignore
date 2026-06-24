@@ -4,3 +4,4 @@ build/
 **/*.so
 **/*.o
 myrules.yaml
+mymosquitto.conf

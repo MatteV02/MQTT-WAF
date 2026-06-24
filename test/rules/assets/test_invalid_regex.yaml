@@ -1,0 +1,13 @@
+version: "1.0"
+default_policies:
+  connection: "allow"
+  authentication: "allow"
+  publish: "allow"
+  subscribe: "allow"
+rules:
+  topic:
+    - id: "TOPIC-001"
+      name: "Bad Regex Test"
+      action: "deny"
+      # This regex has an unclosed bracket, triggering regcomp failure
+      client_id_regex: "^[unterminated"

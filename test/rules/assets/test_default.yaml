@@ -1,0 +1,17 @@
+version: "1.0"
+default_policies:
+  connection: "allow"
+  authentication: "allow"
+  publish: "allow"
+  subscribe: "allow"
+rules:
+  authentication:
+    - id: "AUTH-001"
+      name: "Default Auth Settings"
+      action: "allow"
+      # Omitted trigger and enforcement mappings to test defaults
+  rate_limiting:
+    - id: "RL-001"
+      name: "Default Rate Limit"
+      action: "allow"
+      # Omitted quota mapping to test defaults

@@ -1,0 +1,26 @@
+version: "1.0"
+default_policies:
+  connection: "deny"
+  authentication: "allow"
+  publish: "allow"
+  subscribe: "allow"
+rules:
+  connection:
+    - id: "CONN-001"
+      name: "Block Bad Clients"
+      action: "deny"
+      ip_range: "192.168.1.0/24"
+      client_id_regex: "^bad_client_.*"
+      require_tls: true
+      ip_list:
+        - "10.0.0.1"
+        - "10.0.0.2"
+  message:
+    - id: "MSG-001"
+      name: "SQLi Protection"
+      action: "deny"
+      topics:
+        - "sensors/data"
+      payload_regex: "(DROP TABLE|SELECT \\*)"
+      log: true
+      invert_match: false

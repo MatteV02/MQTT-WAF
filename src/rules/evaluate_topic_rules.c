@@ -14,10 +14,10 @@ int evaluate_topic_rules(const char *client_id, int access, const char *topic, s
         struct topic_rule *t_rule = &rules[i];
         
         // A. Check Client ID Match
-        if (!t_rule->has_client_id_regex) continue;
-        int reg_match = regexec(&t_rule->compiled_client_id_regex, client_id, 0, NULL, 0);
-        
-        if (reg_match) continue; // Client ID didn't match
+        if (t_rule->has_client_id_regex) {
+            int reg_match = regexec(&t_rule->compiled_client_id_regex, client_id, 0, NULL, 0);
+            if (reg_match) continue; // Client ID didn't match, move to next rule
+        }
 
         // B. Check Topic Match based on the Access Type (Publish vs Subscribe)
         bool topic_matched = false;
@@ -47,8 +47,9 @@ int evaluate_topic_rules(const char *client_id, int access, const char *topic, s
 
         // C. Enforce Action if the topic matched
         if (topic_matched) {
-            if (t_rule->action && strcmp(t_rule->action, "drop") == 0) return 0;
             if (t_rule->action && strcmp(t_rule->action, "allow") == 0) return 1;
+            
+            return 0; 
         }
     }
     return -1; // Fallback to default policy

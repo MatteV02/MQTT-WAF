@@ -3,7 +3,7 @@
 #include <mosquitto.h>
 #include <string.h>
 
-int forward_message(struct mosquitto *ext_client, struct mosquitto_evt_message* msg) {
+int forward_message(struct mosquitto *ext_client, struct mosquitto_evt_acl_check* msg) {
     if (ext_client && msg && msg->topic) {
         
         // Ignore internal $SYS topics to prevent spamming the external broker

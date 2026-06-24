@@ -20,24 +20,24 @@ static struct settings *plugin_config = NULL;
 static struct waf_config *waf_rules = NULL;
 
 int callback_acl_check(int event, void *event_data, void *userdata) {
-    struct mosquitto_evt_acl_check *acl = event_data;
+    struct mosquitto_evt_acl_check *msg = event_data;
 
     // Allow locally injected plugins to bypass WAF logic
-    if (acl->client == NULL) {
+    if (msg->client == NULL) {
         return MOSQ_ERR_SUCCESS; 
     }
 
-    const char *client_id = mosquitto_client_id(acl->client);
-    const char *topic = acl->topic ? acl->topic : "UNKNOWN";
+    const char *client_id = mosquitto_client_id(msg->client);
+    const char *topic = msg->topic ? msg->topic : "UNKNOWN";
 
     // 1. Run the request through the WAF engine FIRST
-    int waf_decision = firewall_engine(acl, waf_rules);
+    int waf_decision = firewall_engine(msg, waf_rules);
 
     if (waf_decision == 0) {
         // WAF Denied: Destroy the packet immediately.
         mosquitto_log_printf(MOSQ_LOG_WARNING, 
             "WAF [DENY]: Dropped packet (Access: %d) from Client: '%s' on Topic: '%s'", 
-            acl->access, client_id, topic);
+            msg->access, client_id, topic);
             
         return MOSQ_ERR_ACL_DENIED; 
     } 
@@ -45,42 +45,24 @@ int callback_acl_check(int event, void *event_data, void *userdata) {
     // 2. WAF Approved
     mosquitto_log_printf(MOSQ_LOG_INFO, 
         "WAF [ALLOW]: Approved packet (Access: %d) from Client: '%s' on Topic: '%s'", 
-        acl->access, client_id, topic);
+        msg->access, client_id, topic);
         
-    // 3. Delegate to Bridge Logic ONLY if it's a valid, approved subscription
-    if (acl->access == MOSQ_ACL_SUBSCRIBE) {
+    // 3. Delegate to Bridge Logic ONLY if it's a valid, approved packet
+    if (msg->access == MOSQ_ACL_SUBSCRIBE) {
         if (ext_client) {
             forward_subscription(ext_client, topic);
         }
-    } else if (acl->access == MOSQ_ACL_WRITE) {
-        
-        struct mosquitto_evt_message msg = {
-            .client = acl->client,
-            .topic = (char*)acl->topic,
-            .payload = (char*)acl->payload,
-            .payloadlen = acl->payloadlen,
-            .qos = acl->qos,
-            .retain = acl->retain
-        };
+    } else if (msg->access == MOSQ_ACL_WRITE) {
 
-        log_message(&msg);
+        log_message(msg);
 
         if (ext_client) {
-            forward_message(ext_client, &msg);
+            forward_message(ext_client, msg);
         }
     }
 
     // 4. Finally, grant actual access in the broker
     return MOSQ_ERR_SUCCESS; 
-}
-
-/* This callback is triggered every time a PUBLISH message flows through the broker */
-/* Can be deactivated */
-int callback_message(int event, void *event_data, void *userdata) {
-    struct mosquitto_evt_message *msg = event_data;
-    
-    // Always return SUCCESS so the broker continues processing the message
-    return MOSQ_ERR_SUCCESS;
 }
 
 /* The broker calls this to check if the plugin is compatible */
@@ -155,7 +137,6 @@ int mosquitto_plugin_init(mosquitto_plugin_id_t *identifier, void **user_data, s
 
     // Register the callback to intercept published messages
     mosquitto_callback_register(plugin_id, MOSQ_EVT_ACL_CHECK, callback_acl_check, NULL, NULL);
-    mosquitto_callback_register(plugin_id, MOSQ_EVT_MESSAGE, callback_message, NULL, NULL);
     return MOSQ_ERR_SUCCESS;
 }
 
@@ -163,7 +144,6 @@ int mosquitto_plugin_init(mosquitto_plugin_id_t *identifier, void **user_data, s
 int mosquitto_plugin_cleanup(void *user_data, struct mosquitto_opt *opts, int opt_count) {
     // Unregister the callback
     mosquitto_callback_unregister(plugin_id, MOSQ_EVT_ACL_CHECK, callback_acl_check, NULL);
-    mosquitto_callback_unregister(plugin_id, MOSQ_EVT_MESSAGE, callback_message, NULL);
 
     cleanup_subscription_logic(ext_client);
 

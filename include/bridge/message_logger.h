@@ -6,7 +6,7 @@
 
 extern FILE *log_file;
 
-void log_message(struct mosquitto_evt_message* msg);
+void log_message(struct mosquitto_evt_acl_check* msg);
 int start_logger();
 void stop_logger();
 

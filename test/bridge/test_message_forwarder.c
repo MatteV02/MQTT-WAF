@@ -38,8 +38,8 @@ void test_forward_message_valid(void) {
     CU_ASSERT_PTR_NOT_NULL_FATAL(ext_client);
 
     // Mock a valid message
-    struct mosquitto_evt_message dummy_msg;
-    memset(&dummy_msg, 0, sizeof(struct mosquitto_evt_message));
+    struct mosquitto_evt_acl_check dummy_msg;
+    memset(&dummy_msg, 0, sizeof(struct mosquitto_evt_acl_check));
     dummy_msg.topic = "sensor/temperature";
     dummy_msg.payload = "22.5";
     dummy_msg.payloadlen = strlen((char*)dummy_msg.payload);
@@ -63,8 +63,8 @@ void test_forward_message_sys_topic(void) {
     CU_ASSERT_PTR_NOT_NULL_FATAL(ext_client);
 
     // Mock a $SYS message
-    struct mosquitto_evt_message dummy_msg;
-    memset(&dummy_msg, 0, sizeof(struct mosquitto_evt_message));
+    struct mosquitto_evt_acl_check dummy_msg;
+    memset(&dummy_msg, 0, sizeof(struct mosquitto_evt_acl_check));
     dummy_msg.topic = "$SYS/broker/uptime";
     dummy_msg.payload = "12345";
     dummy_msg.payloadlen = strlen((char*)dummy_msg.payload);
@@ -86,8 +86,8 @@ void test_forward_message_nulls(void) {
     struct mosquitto *ext_client = start_forwarder("test_forwarder", "localhost", 1883);
     CU_ASSERT_PTR_NOT_NULL_FATAL(ext_client);
 
-    struct mosquitto_evt_message dummy_msg;
-    memset(&dummy_msg, 0, sizeof(struct mosquitto_evt_message));
+    struct mosquitto_evt_acl_check dummy_msg;
+    memset(&dummy_msg, 0, sizeof(struct mosquitto_evt_acl_check));
     dummy_msg.topic = NULL; // Intentionally missing topic
 
     // Test missing client

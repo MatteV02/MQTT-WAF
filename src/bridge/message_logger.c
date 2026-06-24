@@ -8,7 +8,7 @@ int start_logger() {
     return log_file ? 0 : -1;
 }
 
-void log_message(struct mosquitto_evt_message* msg) {
+void log_message(struct mosquitto_evt_acl_check* msg) {
     if (log_file && msg && msg->topic) {
         fprintf(log_file, "Topic: %s | QoS: %d | Retain: %d | Payload Length: %d\n", 
                 msg->topic, msg->qos, msg->retain, msg->payloadlen);

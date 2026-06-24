@@ -57,8 +57,8 @@ void test_log_message(void) {
     CU_ASSERT_EQUAL(start_logger(), 0);
 
     // 2. Mock a mosquitto message
-    struct mosquitto_evt_message dummy_msg;
-    memset(&dummy_msg, 0, sizeof(struct mosquitto_evt_message));
+    struct mosquitto_evt_acl_check dummy_msg;
+    memset(&dummy_msg, 0, sizeof(struct mosquitto_evt_acl_check));
     
     dummy_msg.client = NULL; // Assuming log_message handles NULL clients gracefully
     dummy_msg.topic = "unit/test/security";
@@ -117,8 +117,8 @@ void test_log_message_buffer_overflow(void) {
     large_topic[topic_size - 1] = '\0';
 
     // 4. Mock the message
-    struct mosquitto_evt_message dummy_msg;
-    memset(&dummy_msg, 0, sizeof(struct mosquitto_evt_message));
+    struct mosquitto_evt_acl_check dummy_msg;
+    memset(&dummy_msg, 0, sizeof(struct mosquitto_evt_acl_check));
     dummy_msg.client = NULL;
     dummy_msg.topic = large_topic;
     dummy_msg.payload = large_payload;

@@ -3,6 +3,7 @@
 #include <stdarg.h>
 #include <cyaml/cyaml.h>
 #include <regex.h>
+#include <string.h>
 
 #include "rules/waf_rules_parse.h"
 
@@ -48,8 +49,8 @@ static const cyaml_schema_field_t authentication_fields_schema[] = {
     CYAML_FIELD_STRING_PTR("id", CYAML_FLAG_POINTER, struct authentication_rule, id, 0, CYAML_UNLIMITED),
     CYAML_FIELD_STRING_PTR("name", CYAML_FLAG_POINTER, struct authentication_rule, name, 0, CYAML_UNLIMITED),
     CYAML_FIELD_STRING_PTR("action", CYAML_FLAG_POINTER, struct authentication_rule, action, 0, CYAML_UNLIMITED),
-    CYAML_FIELD_MAPPING("trigger", CYAML_FLAG_DEFAULT, struct authentication_rule, trigger, auth_trigger_fields),
-    CYAML_FIELD_MAPPING("enforcement", CYAML_FLAG_DEFAULT, struct authentication_rule, enforcement, auth_enforcement_fields),
+    CYAML_FIELD_MAPPING("trigger", CYAML_FLAG_DEFAULT | CYAML_FLAG_OPTIONAL, struct authentication_rule, trigger, auth_trigger_fields),
+    CYAML_FIELD_MAPPING("enforcement", CYAML_FLAG_DEFAULT | CYAML_FLAG_OPTIONAL, struct authentication_rule, enforcement, auth_enforcement_fields),
     CYAML_FIELD_END
 };
 
@@ -63,7 +64,7 @@ static const cyaml_schema_field_t message_fields_schema[] = {
     CYAML_FIELD_STRING_PTR("name", CYAML_FLAG_POINTER, struct message_rule, name, 0, CYAML_UNLIMITED),
     CYAML_FIELD_STRING_PTR("action", CYAML_FLAG_POINTER, struct message_rule, action, 0, CYAML_UNLIMITED),
     CYAML_FIELD_SEQUENCE_COUNT("topics", CYAML_FLAG_POINTER, struct message_rule, topics, topics_count, &string_schema, 0, CYAML_UNLIMITED),
-    CYAML_FIELD_STRING_PTR("payload_regex", CYAML_FLAG_POINTER, struct message_rule, payload_regex, 0, CYAML_UNLIMITED),
+    CYAML_FIELD_STRING_PTR("payload_regex", CYAML_FLAG_POINTER | CYAML_FLAG_OPTIONAL, struct message_rule, payload_regex, 0, CYAML_UNLIMITED),
     CYAML_FIELD_BOOL("log", CYAML_FLAG_OPTIONAL, struct message_rule, log),
     CYAML_FIELD_BOOL("invert_match", CYAML_FLAG_OPTIONAL, struct message_rule, invert_match),
     CYAML_FIELD_END
@@ -84,8 +85,8 @@ static const cyaml_schema_field_t topic_fields_schema[] = {
     CYAML_FIELD_STRING_PTR("id", CYAML_FLAG_POINTER, struct topic_rule, id, 0, CYAML_UNLIMITED),
     CYAML_FIELD_STRING_PTR("name", CYAML_FLAG_POINTER, struct topic_rule, name, 0, CYAML_UNLIMITED),
     CYAML_FIELD_STRING_PTR("action", CYAML_FLAG_POINTER, struct topic_rule, action, 0, CYAML_UNLIMITED),
-    CYAML_FIELD_STRING_PTR("client_id_regex", CYAML_FLAG_POINTER, struct topic_rule, client_id_regex, 0, CYAML_UNLIMITED),
-    CYAML_FIELD_MAPPING("permissions", CYAML_FLAG_DEFAULT, struct topic_rule, permissions, topic_permissions_fields),
+    CYAML_FIELD_STRING_PTR("client_id_regex", CYAML_FLAG_POINTER | CYAML_FLAG_OPTIONAL, struct topic_rule, client_id_regex, 0, CYAML_UNLIMITED),
+    CYAML_FIELD_MAPPING("permissions", CYAML_FLAG_DEFAULT | CYAML_FLAG_OPTIONAL, struct topic_rule, permissions, topic_permissions_fields),
     CYAML_FIELD_END
 };
 
@@ -107,7 +108,7 @@ static const cyaml_schema_field_t rate_limiting_fields_schema[] = {
     CYAML_FIELD_STRING_PTR("client_id_regex", CYAML_FLAG_POINTER | CYAML_FLAG_OPTIONAL, struct rate_limiting_rule, client_id_regex, 0, CYAML_UNLIMITED),
     CYAML_FIELD_STRING_PTR("packet_type", CYAML_FLAG_POINTER | CYAML_FLAG_OPTIONAL, struct rate_limiting_rule, packet_type, 0, CYAML_UNLIMITED),
     CYAML_FIELD_STRING_PTR("ip_range", CYAML_FLAG_POINTER | CYAML_FLAG_OPTIONAL, struct rate_limiting_rule, ip_range, 0, CYAML_UNLIMITED),
-    CYAML_FIELD_MAPPING("quota", CYAML_FLAG_DEFAULT, struct rate_limiting_rule, quota, rate_quota_fields),
+    CYAML_FIELD_MAPPING("quota", CYAML_FLAG_DEFAULT | CYAML_FLAG_OPTIONAL, struct rate_limiting_rule, quota, rate_quota_fields),
     CYAML_FIELD_END
 };
 
@@ -226,6 +227,88 @@ static int compile_rule_regexes(struct waf_config *config) {
     return 0;
 }
 
+/* ---------------------------------------------------------
+ * HELPER: APPLY DEFAULT VALUES
+ * --------------------------------------------------------- */
+static void apply_default_values(struct waf_config *config) {
+    if (!config) return;
+
+    /* Global Defaults */
+    if (!config->default_policies.connection)     config->default_policies.connection = strdup("allow");
+    if (!config->default_policies.authentication) config->default_policies.authentication = strdup("allow");
+    if (!config->default_policies.publish)        config->default_policies.publish = strdup("allow");
+    if (!config->default_policies.subscribe)      config->default_policies.subscribe = strdup("allow");
+
+    /* Connection Rules */
+    for (unsigned i = 0; i < config->rules.connection_count; i++) {
+        struct connection_rule *r = &config->rules.connection[i];
+        if (!r->action) r->action = strdup("allow");
+        
+        // r->require_tls defaults to `false` via libcyaml zero-init.
+        // If you want it to default to true, uncomment the line below:
+        // /* r->require_tls = true; // (Requires adding a separate "is_present" tracking boolean to schema if you want to distinguish explicit 'false' from missing) */
+    }
+
+    /* Authentication Rules */
+    for (unsigned i = 0; i < config->rules.authentication_count; i++) {
+        struct authentication_rule *r = &config->rules.authentication[i];
+        if (!r->action) r->action = strdup("allow");
+
+        // trigger mapping defaults
+        if (r->trigger.max_failed_attempts == 0) {
+            r->trigger.max_failed_attempts = 5; 
+        }
+        if (!r->trigger.time_window) {
+            r->trigger.time_window = strdup("60s");
+        }
+
+        // enforcement mapping defaults
+        if (!r->enforcement.lockout_duration) {
+            r->enforcement.lockout_duration = strdup("5m");
+        }
+        if (!r->enforcement.target) {
+            r->enforcement.target = strdup("ip"); 
+        }
+    }
+
+    /* Message Rules */
+    for (unsigned i = 0; i < config->rules.message_count; i++) {
+        struct message_rule *r = &config->rules.message[i];
+        if (!r->action) r->action = strdup("allow");
+
+        // r->payload_regex defaults to NULL. We leave it as NULL. 
+        // Our compile_rule_regexes() function already checks `if (r->payload_regex)` 
+        // so it will safely skip compilation for rules without regexes.
+
+        // r->log and r->invert_match default to `false` via libcyaml zero-init.
+    }
+
+    /* Topic Rules */
+    for (unsigned i = 0; i < config->rules.topic_count; i++) {
+        struct topic_rule *r = &config->rules.topic[i];
+        if (!r->action) r->action = strdup("allow");
+
+        // r->permissions mapping: 
+        // If omitted, publish_count and subscribe_count are naturally 0, 
+        // and their string arrays are NULL. This safely evaluates to "no explicit permissions defined".
+    }
+
+    /* Rate Limiting Rules */
+    for (unsigned i = 0; i < config->rules.rate_limiting_count; i++) {
+        struct rate_limiting_rule *r = &config->rules.rate_limiting[i];
+        if (!r->action) r->action = strdup("allow");
+
+        // r->client_id_regex and r->ip_range safely default to NULL.
+
+        // quota mapping defaults
+        if (r->quota.max_messages == 0) {
+            r->quota.max_messages = 100; // Default limit
+        }
+        if (!r->quota.time_window) {
+            r->quota.time_window = strdup("1s"); // Default rate limit window
+        }
+    }
+}
 
 /* ---------------------------------------------------------
  * CORE PARSING FUNCTIONS
@@ -243,6 +326,9 @@ struct waf_config* load_waf_rules(const char *filepath) {
                 filepath, cyaml_strerror(err));
         return NULL;
     }
+
+    /* Apply default values */
+    apply_default_values(config);
 
     /* Compile Regexes Post-Parse */
     if (compile_rule_regexes(config) != 0) {

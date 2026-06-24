@@ -2,6 +2,7 @@
 #define WAF_RULES_PARSE_H_
 
 #include <stdbool.h>
+#include <regex.h>
 
 /* ---------------------------------------------------------
  * WAF DATA STRUCTURES
@@ -20,6 +21,8 @@ struct connection_rule {
     char *action;
     char *ip_range;         
     char *client_id_regex;  
+    regex_t compiled_client_id_regex; /* NEW: Compiled regex */
+    bool has_client_id_regex;         /* NEW: Compilation flag */
     bool require_tls;       
     char **ip_list;         
     unsigned ip_list_count;
@@ -50,6 +53,8 @@ struct message_rule {
     char **topics;
     unsigned topics_count;
     char *payload_regex;
+    regex_t compiled_payload_regex; /* NEW: Compiled regex */
+    bool has_payload_regex;         /* NEW: Compilation flag */
     bool log;               
     bool invert_match;      
 };
@@ -66,6 +71,8 @@ struct topic_rule {
     char *name;
     char *action;
     char *client_id_regex;
+    regex_t compiled_client_id_regex; /* NEW: Compiled regex */
+    bool has_client_id_regex;         /* NEW: Compilation flag */
     struct topic_permissions permissions;
 };
 
@@ -79,6 +86,8 @@ struct rate_limiting_rule {
     char *name;
     char *action;
     char *client_id_regex;  
+    regex_t compiled_client_id_regex; /* NEW: Compiled regex */
+    bool has_client_id_regex;         /* NEW: Compilation flag */
     char *packet_type;      
     char *ip_range;          
     struct rate_quota quota;

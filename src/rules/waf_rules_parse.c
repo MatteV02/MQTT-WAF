@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <cyaml/cyaml.h>
+#include <regex.h>
 
 #include "rules/waf_rules_parse.h"
 
@@ -163,11 +164,73 @@ static const cyaml_config_t cyaml_config = {
 };
 
 
-/**
- * Loads the WAF YAML rules file into dynamically allocated C arrays.
- * * @param filepath Path to the YAML rule definitions file.
- * @return Struct pointer containing separate rule arrays, or NULL on failure.
- */
+/* ---------------------------------------------------------
+ * HELPER: REGEX COMPILER
+ * --------------------------------------------------------- */
+static bool compile_single_regex(regex_t *compiled, const char *pattern, const char *rule_id, const char *rule_type) {
+    /* REG_EXTENDED for modern regex syntax, REG_NOSUB because we don't need extraction */
+    int err = regcomp(compiled, pattern, REG_EXTENDED | REG_NOSUB);
+    if (err != 0) {
+        char errbuf[256];
+        regerror(err, compiled, errbuf, sizeof(errbuf));
+        fprintf(stderr, "[WAF ERROR] Failed to compile regex '%s' for %s rule '%s': %s\n",
+                pattern, rule_type, rule_id ? rule_id : "unknown", errbuf);
+        return false;
+    }
+    return true;
+}
+
+static int compile_rule_regexes(struct waf_config *config) {
+    /* Initialize all has_regex flags to false first, ensuring safe cleanup if we fail halfway */
+    for (unsigned i = 0; i < config->rules.connection_count; i++) config->rules.connection[i].has_client_id_regex = false;
+    for (unsigned i = 0; i < config->rules.message_count; i++)    config->rules.message[i].has_payload_regex = false;
+    for (unsigned i = 0; i < config->rules.topic_count; i++)      config->rules.topic[i].has_client_id_regex = false;
+    for (unsigned i = 0; i < config->rules.rate_limiting_count; i++) config->rules.rate_limiting[i].has_client_id_regex = false;
+
+    /* Compile Connection Regexes */
+    for (unsigned i = 0; i < config->rules.connection_count; i++) {
+        struct connection_rule *r = &config->rules.connection[i];
+        if (r->client_id_regex) {
+            if (!compile_single_regex(&r->compiled_client_id_regex, r->client_id_regex, r->id, "connection")) return -1;
+            r->has_client_id_regex = true;
+        }
+    }
+
+    /* Compile Message Regexes */
+    for (unsigned i = 0; i < config->rules.message_count; i++) {
+        struct message_rule *r = &config->rules.message[i];
+        if (r->payload_regex) {
+            if (!compile_single_regex(&r->compiled_payload_regex, r->payload_regex, r->id, "message")) return -1;
+            r->has_payload_regex = true;
+        }
+    }
+
+    /* Compile Topic Regexes */
+    for (unsigned i = 0; i < config->rules.topic_count; i++) {
+        struct topic_rule *r = &config->rules.topic[i];
+        if (r->client_id_regex) {
+            if (!compile_single_regex(&r->compiled_client_id_regex, r->client_id_regex, r->id, "topic")) return -1;
+            r->has_client_id_regex = true;
+        }
+    }
+
+    /* Compile Rate Limiting Regexes */
+    for (unsigned i = 0; i < config->rules.rate_limiting_count; i++) {
+        struct rate_limiting_rule *r = &config->rules.rate_limiting[i];
+        if (r->client_id_regex) {
+            if (!compile_single_regex(&r->compiled_client_id_regex, r->client_id_regex, r->id, "rate_limiting")) return -1;
+            r->has_client_id_regex = true;
+        }
+    }
+
+    return 0;
+}
+
+
+/* ---------------------------------------------------------
+ * CORE PARSING FUNCTIONS
+ * --------------------------------------------------------- */
+
 struct waf_config* load_waf_rules(const char *filepath) {
     struct waf_config *config = NULL;
 
@@ -181,6 +244,13 @@ struct waf_config* load_waf_rules(const char *filepath) {
         return NULL;
     }
 
+    /* Compile Regexes Post-Parse */
+    if (compile_rule_regexes(config) != 0) {
+        /* A regex failed to compile. Clean up and abort. */
+        free_waf_rules(config);
+        return NULL;
+    }
+
     return config;
 }
 
@@ -190,6 +260,22 @@ struct waf_config* load_waf_rules(const char *filepath) {
  */
 void free_waf_rules(struct waf_config *config) {
     if (config != NULL) {
+        
+        /* 1) Free Compiled Regexes */
+        for (unsigned i = 0; i < config->rules.connection_count; i++) {
+            if (config->rules.connection[i].has_client_id_regex) regfree(&config->rules.connection[i].compiled_client_id_regex);
+        }
+        for (unsigned i = 0; i < config->rules.message_count; i++) {
+            if (config->rules.message[i].has_payload_regex) regfree(&config->rules.message[i].compiled_payload_regex);
+        }
+        for (unsigned i = 0; i < config->rules.topic_count; i++) {
+            if (config->rules.topic[i].has_client_id_regex) regfree(&config->rules.topic[i].compiled_client_id_regex);
+        }
+        for (unsigned i = 0; i < config->rules.rate_limiting_count; i++) {
+            if (config->rules.rate_limiting[i].has_client_id_regex) regfree(&config->rules.rate_limiting[i].compiled_client_id_regex);
+        }
+
+        /* 2) Free Struct Memory Allocated by CYAML */
         cyaml_free(&cyaml_config, &top_level_schema, config, 0);
     }
 }
@@ -228,7 +314,7 @@ void print_waf_rules(struct waf_config *config) {
     for (unsigned i = 0; i < config->rules.message_count; i++) {
         struct message_rule *r = &config->rules.message[i];
         printf("  - %s [%s] -> %s\n", r->id, r->name, r->action);
-        printf("      Regex: %s\n", r->payload_regex);
+        printf("      Regex: %s (Compiled: %s)\n", r->payload_regex, r->has_payload_regex ? "Yes" : "No");
     }
 
     printf("\n[Topic Rules] Count: %u\n", config->rules.topic_count);

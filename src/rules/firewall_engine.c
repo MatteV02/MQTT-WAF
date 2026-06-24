@@ -15,10 +15,8 @@ int evaluate_topic_rules(const char *client_id, int access, const char *topic, s
         struct topic_rule *t_rule = &rules[i];
         
         // A. Check Client ID Match
-        regex_t regex;
-        if (regcomp(&regex, t_rule->client_id_regex, REG_EXTENDED | REG_NOSUB) != 0) continue;
-        int reg_match = regexec(&regex, client_id, 0, NULL, 0);
-        regfree(&regex);
+        if (!t_rule->has_client_id_regex) continue;
+        int reg_match = regexec(&t_rule->compiled_client_id_regex, client_id, 0, NULL, 0);
         
         if (reg_match) continue; // Client ID didn't match
 

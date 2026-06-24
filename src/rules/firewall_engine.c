@@ -7,6 +7,7 @@
 
 #include "rules/waf_rules_parse.h"
 #include "rules/evaluate_topic_rules.h"
+#include "rules/evaluate_message_rules.h"
 
 /*
  * firewall_engine evaluates the ACL payload.
@@ -21,6 +22,11 @@ int firewall_engine(struct mosquitto_evt_acl_check *acl, struct waf_config *rule
     
     if (topic_action != -1) {
         return topic_action; 
+    }
+
+    int message_action = evaluate_message_rules(acl->topic, acl->payload, acl->payloadlen, rules->rules.message, rules->rules.message_count);
+    if (message_action != -1) {
+        return message_action; 
     }
 
     // ---------------------------------------------------------

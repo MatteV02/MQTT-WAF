@@ -1,0 +1,2 @@
+ext_broker_host: [this is malformed yaml
+ext_broker_port: not_an_int

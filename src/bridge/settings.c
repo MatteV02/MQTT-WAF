@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <cyaml/cyaml.h>
 #include "bridge/settings.h"
 
@@ -13,17 +14,17 @@ void cyaml_log_stderr(cyaml_log_t level, void *ctx, const char *fmt, va_list arg
 static const cyaml_schema_field_t settings_fields_schema[] = {
     // Map string to ext_broker_host
     CYAML_FIELD_STRING_PTR(
-        "ext_broker_host", CYAML_FLAG_POINTER,
+        "ext_broker_host", CYAML_FLAG_POINTER | CYAML_FLAG_OPTIONAL,
         struct settings, ext_broker_host, 0, CYAML_UNLIMITED),
     
     // Map integer to ext_broker_port
     CYAML_FIELD_INT(
-        "ext_broker_port", CYAML_FLAG_DEFAULT,
+        "ext_broker_port", CYAML_FLAG_DEFAULT | CYAML_FLAG_OPTIONAL,
         struct settings, ext_broker_port),
     
     // Map string to ext_client_id
     CYAML_FIELD_STRING_PTR(
-        "ext_client_id", CYAML_FLAG_POINTER,
+        "ext_client_id", CYAML_FLAG_POINTER | CYAML_FLAG_OPTIONAL,
         struct settings, ext_client_id, 0, CYAML_UNLIMITED),
     
     // End of schema marker
@@ -53,6 +54,24 @@ struct settings* parse_settings(const char* filename) {
     if (err != CYAML_OK) {
         fprintf(stderr, "libcyaml parsing error: %s\n", cyaml_strerror(err));
         return NULL;
+    }
+
+    // --- APPLY DEFAULT VALUES ---
+    
+    // Missing strings will be NULL
+    if (cfg->ext_broker_host == NULL) {
+        // Use strdup so cyaml_free() can safely deallocate it later
+        cfg->ext_broker_host = strdup("localhost");
+    }
+    
+    // Missing integers will be 0
+    if (cfg->ext_broker_port == 0) {
+        cfg->ext_broker_port = 1883;
+    }
+    
+    if (cfg->ext_client_id == NULL) {
+        // Use strdup here as well
+        cfg->ext_client_id = strdup("default_client_id");
     }
 
     return cfg;

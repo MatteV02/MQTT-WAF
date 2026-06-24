@@ -16,7 +16,6 @@ extern void reset_mosquitto_mocks(void);
 
 /* Dummy structures for testing (using arbitrary non-NULL pointers because the structs are opaque) */
 static struct mosquitto *dummy_ext_client = (struct mosquitto *)0x1234;
-static mosquitto_plugin_id_t *dummy_plugin_id = (mosquitto_plugin_id_t *)0x5678;
 
 /* Setup function run before each test */
 int init_suite(void) {

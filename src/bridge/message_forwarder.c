@@ -25,6 +25,9 @@ int forward_message(struct mosquitto *ext_client, struct mosquitto_evt_message* 
             mosquitto_log_printf(MOSQ_LOG_ERR, "Logger Plugin: Failed to forward msg on %s (Error: %d)", msg->topic, rc);
             return -1;
         }
+    } else {
+        mosquitto_log_printf(MOSQ_LOG_ERR, "Logger Plugin: Failed to forward msg on (no connection)");
+        return -1;
     }
 
     return 0;

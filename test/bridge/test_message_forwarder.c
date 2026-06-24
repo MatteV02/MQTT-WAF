@@ -91,13 +91,13 @@ void test_forward_message_nulls(void) {
     dummy_msg.topic = NULL; // Intentionally missing topic
 
     // Test missing client
-    CU_ASSERT_EQUAL(forward_message(NULL, &dummy_msg), 0);
+    CU_ASSERT_EQUAL(forward_message(NULL, &dummy_msg), -1);
     
     // Test missing message
-    CU_ASSERT_EQUAL(forward_message(ext_client, NULL), 0);
+    CU_ASSERT_EQUAL(forward_message(ext_client, NULL), -1);
     
     // Test missing topic within message
-    CU_ASSERT_EQUAL(forward_message(ext_client, &dummy_msg), 0);
+    CU_ASSERT_EQUAL(forward_message(ext_client, &dummy_msg), -1);
 
     stop_forwarder(ext_client);
 }

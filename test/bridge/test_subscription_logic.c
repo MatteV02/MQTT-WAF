@@ -1,7 +1,7 @@
 #include <CUnit/Basic.h>
 #include <string.h>
 #include <mosquitto.h>
-#include "bridge/subscription_logic.h"
+#include "bridge/message_forwarder.h"
 
 /* Extern declarations for mock tracking variables */
 extern int mock_subscribe_call_count;
@@ -27,25 +27,11 @@ int clean_suite(void) {
     return 0;
 }
 
-/* Test: Initialization logic */
-void test_init_subscription_logic(void) {
-    reset_mosquitto_mocks();
-    
-    int rc = init_subscription_logic(dummy_ext_client);
-    
-    CU_ASSERT_EQUAL(rc, MOSQ_ERR_SUCCESS);
-    /* Verify the callback was successfully registered into our mock */
-    CU_ASSERT_PTR_NOT_NULL(mock_ext_message_cb);
-}
-
 /* Test: Forwarding a valid subscription */
 void test_forward_subscription_valid(void) {
     reset_mosquitto_mocks();
     
-    /* Must initialize first to set the internal g_ext_client pointer */
-    init_subscription_logic(dummy_ext_client);
-    
-    forward_subscription(dummy_ext_client, "sensors/temperature/room1");
+    subscription_forward(dummy_ext_client, "sensors/temperature/room1");
     
     CU_ASSERT_EQUAL(mock_subscribe_call_count, 1);
     CU_ASSERT_STRING_EQUAL(mock_last_subscribed_topic, "sensors/temperature/room1");
@@ -54,9 +40,8 @@ void test_forward_subscription_valid(void) {
 /* Test: Forwarding when the topic is NULL */
 void test_forward_subscription_null_topic(void) {
     reset_mosquitto_mocks();
-    init_subscription_logic(dummy_ext_client);
     
-    forward_subscription(dummy_ext_client, NULL);
+    subscription_forward(dummy_ext_client, NULL);
     
     /* Should safely do nothing */
     CU_ASSERT_EQUAL(mock_subscribe_call_count, 0);
@@ -65,7 +50,6 @@ void test_forward_subscription_null_topic(void) {
 /* Test: The static callback (on_ext_client_message) using our mock interceptor */
 void test_on_ext_client_message(void) {
     reset_mosquitto_mocks();
-    init_subscription_logic(dummy_ext_client);
     
     /* Ensure the callback was grabbed */
     CU_ASSERT_PTR_NOT_NULL_FATAL(mock_ext_message_cb);
@@ -88,12 +72,6 @@ void test_on_ext_client_message(void) {
     CU_ASSERT_STRING_EQUAL(mock_last_published_payload, "hello broker");
 }
 
-/* Test: Cleanup logic */
-void test_cleanup_subscription_logic(void) {
-    int rc = cleanup_subscription_logic(dummy_ext_client);
-    CU_ASSERT_EQUAL(rc, MOSQ_ERR_SUCCESS);
-}
-
 /* Main test runner */
 int main(void) {
     CU_pSuite pSuite = NULL;
@@ -107,11 +85,10 @@ int main(void) {
         return CU_get_error();
     }
 
-    if ((NULL == CU_add_test(pSuite, "test_init", test_init_subscription_logic)) ||
+    if (
         (NULL == CU_add_test(pSuite, "test_forward_valid", test_forward_subscription_valid)) ||
         (NULL == CU_add_test(pSuite, "test_forward_null", test_forward_subscription_null_topic)) ||
-        (NULL == CU_add_test(pSuite, "test_message_callback", test_on_ext_client_message)) ||
-        (NULL == CU_add_test(pSuite, "test_cleanup", test_cleanup_subscription_logic))) 
+        (NULL == CU_add_test(pSuite, "test_message_callback", test_on_ext_client_message)))
     {
         CU_cleanup_registry();
         return CU_get_error();

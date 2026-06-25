@@ -6,7 +6,8 @@
 #include <mosquitto.h>
 
 struct mosquitto * start_forwarder(char* client_id, char* host, int port);
-int forward_message(struct mosquitto *ext_client, struct mosquitto_evt_acl_check* msg);
+int publish_forward(struct mosquitto *ext_client, struct mosquitto_evt_acl_check* msg);
+int subscription_forward(struct mosquitto *ext_client, const char *topic);
 void stop_forwarder(struct mosquitto * ext_client);
 
 #endif

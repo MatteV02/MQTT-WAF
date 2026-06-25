@@ -6,7 +6,6 @@
 #include "bridge/message_logger.h"
 #include "bridge/message_forwarder.h"
 #include "bridge/settings.h"
-#include "bridge/subscription_logic.h"
 #include "rules/waf_rules_parse.h"
 #include "rules/firewall_engine.h"
 
@@ -49,15 +48,14 @@ int callback_acl_check(int event, void *event_data, void *userdata) {
         
     // 3. Delegate to Bridge Logic ONLY if it's a valid, approved packet
     if (msg->access == MOSQ_ACL_SUBSCRIBE) {
+        // forward a subscription
         if (ext_client) {
-            forward_subscription(ext_client, topic);
+            subscription_forward(ext_client, topic);
         }
     } else if (msg->access == MOSQ_ACL_WRITE) {
-
-        log_message(msg);
-
+        // forward the published message
         if (ext_client) {
-            forward_message(ext_client, msg);
+            publish_forward(ext_client, msg);
         }
     }
 
@@ -131,8 +129,6 @@ int mosquitto_plugin_init(mosquitto_plugin_id_t *identifier, void **user_data, s
         // TODO add a background retry logic to use the local broker as cache and then send message to the remote broker
     }
 
-    init_subscription_logic(ext_client);
-
     mosquitto_log_printf(MOSQ_LOG_INFO, "Logger Plugin: Initialized successfully using %s", config_path);
 
     // Register the callback to intercept published messages
@@ -144,8 +140,6 @@ int mosquitto_plugin_init(mosquitto_plugin_id_t *identifier, void **user_data, s
 int mosquitto_plugin_cleanup(void *user_data, struct mosquitto_opt *opts, int opt_count) {
     // Unregister the callback
     mosquitto_callback_unregister(plugin_id, MOSQ_EVT_ACL_CHECK, callback_acl_check, NULL);
-
-    cleanup_subscription_logic(ext_client);
 
     stop_forwarder(ext_client);
     stop_logger();

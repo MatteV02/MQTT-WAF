@@ -1,3 +1,4 @@
+#include <CUnit/CUnit.h>
 #include <string.h>
 #include <CUnit/Basic.h>
 #include <mosquitto.h>
@@ -26,6 +27,8 @@ void test_start_stop_forwarder(void) {
     
     // Cleanly stop the background thread and destroy the client
     stop_forwarder(ext_client);
+
+    CU_PASS("Message forwarder started and stopped successfully.");
 }
 
 /*
@@ -48,7 +51,7 @@ void test_forward_message_valid(void) {
 
     // Because we are using the async client, mosquitto_publish will return 
     // MOSQ_ERR_SUCCESS (0) simply for successfully enqueueing the message.
-    int rc = forward_message(ext_client, &dummy_msg);
+    int rc = publish_forward(ext_client, &dummy_msg);
     CU_ASSERT_EQUAL(rc, 0);
 
     stop_forwarder(ext_client);
@@ -72,7 +75,7 @@ void test_forward_message_sys_topic(void) {
     dummy_msg.retain = false;
 
     // Your code returns 0 when ignoring a $SYS topic
-    int rc = forward_message(ext_client, &dummy_msg);
+    int rc = publish_forward(ext_client, &dummy_msg);
     CU_ASSERT_EQUAL(rc, 0);
 
     stop_forwarder(ext_client);
@@ -91,13 +94,13 @@ void test_forward_message_nulls(void) {
     dummy_msg.topic = NULL; // Intentionally missing topic
 
     // Test missing client
-    CU_ASSERT_EQUAL(forward_message(NULL, &dummy_msg), -1);
+    CU_ASSERT_EQUAL(publish_forward(NULL, &dummy_msg), -1);
     
     // Test missing message
-    CU_ASSERT_EQUAL(forward_message(ext_client, NULL), -1);
+    CU_ASSERT_EQUAL(publish_forward(ext_client, NULL), -1);
     
     // Test missing topic within message
-    CU_ASSERT_EQUAL(forward_message(ext_client, &dummy_msg), -1);
+    CU_ASSERT_EQUAL(publish_forward(ext_client, &dummy_msg), -1);
 
     stop_forwarder(ext_client);
 }

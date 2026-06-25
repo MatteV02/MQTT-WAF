@@ -1,3 +1,18 @@
+/**
+ * @file test_settings.c
+ * @brief Unit tests for the bridge settings configuration parser.
+ *
+ * This file contains CUnit test cases to verify the behavior of the YAML 
+ * parsing logic defined in settings.h. It tests successful parsing, default 
+ * value application, and error handling for missing or malformed files.
+ *
+ * @defgroup settings_tests Settings Unit Tests
+ * @brief Unit tests for bridge settings
+ * @ingroup bridge_tests
+ *
+ * @{
+ */
+
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
 
@@ -134,3 +149,5 @@ int main() {
     CU_cleanup_registry();
     return CU_get_error();
 }
+
+/** @} */

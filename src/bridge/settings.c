@@ -1,3 +1,10 @@
+/**
+ * @file settings.c
+ * @brief Configuration settings parser for the WAF plugin bridge.
+ *
+ * @ingroup settings Bridge settings code unit
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <cyaml/cyaml.h>
@@ -5,12 +12,12 @@
 
 #include <stdarg.h> // Required for va_list
 
-// 1. Define a simple wrapper to route libcyaml logs to stderr
+// Define a simple wrapper to route libcyaml logs to stderr
 void cyaml_log_stderr(cyaml_log_t level, void *ctx, const char *fmt, va_list args) {
     vfprintf(stderr, fmt, args);
 }
 
-// 1. Define the schema for the struct fields
+// Define the schema for the struct fields
 static const cyaml_schema_field_t settings_fields_schema[] = {
     // Map string to ext_broker_host
     CYAML_FIELD_STRING_PTR(

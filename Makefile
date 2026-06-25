@@ -59,6 +59,10 @@ $(TEST_BUILD_DIR)/%: test/%.c $(OBJS) $(MOCK_OBJS)
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $< $(OBJS) $(MOCK_OBJS) -o $@ $(TEST_LDLIBS)
 
+docs:
+	@echo "Generating Doxygen documentation..."
+	doxygen Doxyfile
+
 clean:
 	rm -rf $(BUILD_DIR)
 

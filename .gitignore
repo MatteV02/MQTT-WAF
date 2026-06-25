@@ -5,3 +5,5 @@ build/
 **/*.o
 myrules.yaml
 mymosquitto.conf
+html/
+latex/

@@ -1,3 +1,14 @@
+/**
+ * @file plugin.c
+ * @brief Main entry point for the Mosquitto WAF and Logger plugin.
+ *
+ * This file contains the core lifecycle functions and ACL callback required 
+ * to interface with the Mosquitto broker, parse WAF rules, and handle 
+ * message forwarding and logging.
+ *
+ * @ingroup units Units
+ */
+
 #include <string.h>
 #include <mosquitto_broker.h>
 #include <mosquitto_plugin.h>

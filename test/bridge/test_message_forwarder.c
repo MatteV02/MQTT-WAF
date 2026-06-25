@@ -1,3 +1,13 @@
+/**
+ * @file test_message_forwarder.c
+ * @brief Unit tests for the message forwarder module.
+ * @brief All unit tests for the WAF plugin.
+ * * * @defgroup message_forwarder_tests Message Forwarder Tests
+ * @ingroup tests
+ * @brief Tests for start/stop lifecycle and message filtering.
+ * @{
+ */
+
 #include <CUnit/CUnit.h>
 #include <string.h>
 #include <CUnit/Basic.h>
@@ -13,9 +23,9 @@
 int init_forwarder_suite(void) { return 0; }
 int clean_forwarder_suite(void) { return 0; }
 
-/*
- * Test: start_forwarder() and stop_forwarder()
- * Verifies that the external client object is created, the background 
+/**
+ * @brief Test start and stop functionality.
+ * * @test Verifies that the external client object is created, the background 
  * thread starts, and it shuts down cleanly without hanging.
  */
 void test_start_stop_forwarder(void) {
@@ -31,9 +41,9 @@ void test_start_stop_forwarder(void) {
     CU_PASS("Message forwarder started and stopped successfully.");
 }
 
-/*
- * Test: forward_message() - Standard message
- * Verifies that a normal message passes the internal checks and is 
+/**
+ * @brief Test forwarding a valid standard message.
+ * * @test Verifies that a normal message passes the internal checks and is 
  * queued for publishing.
  */
 void test_forward_message_valid(void) {
@@ -57,9 +67,10 @@ void test_forward_message_valid(void) {
     stop_forwarder(ext_client);
 }
 
-/*
- * Test: forward_message() - $SYS topic ignore
- * Verifies that internal broker topics are caught and dropped to prevent loops.
+/**
+ * @brief Test forwarding a valid standard message.
+ * * @test Verifies that a normal message passes the internal checks and is 
+ * queued for publishing.
  */
 void test_forward_message_sys_topic(void) {
     struct mosquitto *ext_client = start_forwarder("test_forwarder", "localhost", 1883);
@@ -81,9 +92,9 @@ void test_forward_message_sys_topic(void) {
     stop_forwarder(ext_client);
 }
 
-/*
- * Test: forward_message() - NULL boundary checks
- * Verifies that the plugin doesn't segfault if given null pointers.
+/**
+ * @brief Test handling of NULL pointers.
+ * * @test Verifies that the plugin doesn't segfault if given null pointers.
  */
 void test_forward_message_nulls(void) {
     struct mosquitto *ext_client = start_forwarder("test_forwarder", "localhost", 1883);
@@ -139,3 +150,5 @@ int main() {
     
     return exit_code;
 }
+
+/** @} */ // Ends the message_forwarder_tests group

@@ -1,0 +1,4 @@
+/**
+ * @defgroup tests Unit Tests
+ * @brief All unit tests for the WAF plugin.
+ */

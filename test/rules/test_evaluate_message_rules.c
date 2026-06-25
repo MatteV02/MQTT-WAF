@@ -4,11 +4,8 @@
 #include <regex.h>
 #include <mosquitto.h>
 
-// Include your header file here
 #include "rules/waf_rules_parse.h"
-
-// Forward declaration of the function we are testing
-int evaluate_message_rules(const char *topic, const void *payload, int payloadlen, struct message_rule *rules, unsigned count);
+#include "rules/evaluate_message_rules.h"
 
 /* ---------------------------------------------------------
  * TEST CASES

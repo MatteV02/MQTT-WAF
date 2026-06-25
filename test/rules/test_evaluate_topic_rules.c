@@ -1,3 +1,14 @@
+/**
+ * @file test_evaluate_topic_rules.c
+ * @brief CUnit test suite for the evaluate_topic_rules functionality.
+ *
+ * @defgroup evaluate_topic_rules_tests Topic Rules Evuluator Tests
+ * @brief Unit tests for the message topic rules evaluation module.
+ * @ingroup rules_tests
+ *
+ * @{
+ */
+
 #include <stdlib.h>
 #include <stdbool.h>
 #include <regex.h>
@@ -7,17 +18,25 @@
 
 #include "rules/waf_rules_parse.h"
 
-// External declaration of the function we are testing
+/** @brief External declaration of the function being tested */
 extern int evaluate_topic_rules(const char *client_id, int access, const char *topic, struct topic_rule *rules, unsigned count);
 
-/* Global test rules array representing the WAF rules */
+/** @brief Global test rules array representing the WAF rules */
 struct topic_rule test_rules[2];
+
+/** @brief The number of test rules loaded */
 unsigned test_rules_count = 2;
 
 /* ---------------------------------------------------------
  * SUITE SETUP & TEARDOWN
  * --------------------------------------------------------- */
 
+/**
+ * @brief Initializes the test suite.
+ * * Sets up Mosquitto and populates the global `test_rules` array 
+ * with predefined rules (TOP-001 and TOP-002) for the test cases.
+ * * @return 0 on success.
+ */
 int init_suite(void) {
     // Initialize mosquitto library if required for mosquitto_topic_matches_sub
     mosquitto_lib_init();
@@ -61,6 +80,12 @@ int init_suite(void) {
     return 0;
 }
 
+/**
+ * @brief Cleans up the test suite.
+ * * Frees compiled regexes and allocated memory to prevent memory leaks 
+ * during CUnit test execution.
+ * * @return 0 on success.
+ */
 int clean_suite(void) {
     // Free compiled regexes and allocated arrays to prevent memory leaks during testing
     regfree(&test_rules[0].compiled_client_id_regex);
@@ -78,6 +103,10 @@ int clean_suite(void) {
  * TEST CASES
  * --------------------------------------------------------- */
 
+/**
+ * @brief Tests allowing valid publish from a sensor.
+ * Expects the rule to return 1 (allow).
+ */
 void test_allow_valid_sensor_publish(void) {
     // Client "sensor-123" publishing to "sensors/temp/telemetry"
     // Should match TOP-001 (returns 1 for "allow")
@@ -85,6 +114,10 @@ void test_allow_valid_sensor_publish(void) {
     CU_ASSERT_EQUAL(result, 1);
 }
 
+/**
+ * @brief Tests allowing valid subscription from a sensor.
+ * Expects the rule to return 1 (allow).
+ */
 void test_allow_valid_sensor_subscribe(void) {
     // Client "sensor-123" subscribing to "commands/broadcast/update/v2"
     // Should match TOP-001 (returns 1 for "allow")
@@ -92,6 +125,10 @@ void test_allow_valid_sensor_subscribe(void) {
     CU_ASSERT_EQUAL(result, 1);
 }
 
+/**
+ * @brief Tests denying sensor publish on an invalid topic.
+ * Expects the rule logic to fall through and return -1.
+ */
 void test_deny_sensor_invalid_topic_publish(void) {
     // Client "sensor-123" publishing to "sensors/temp/data"
     // Matches Client ID, but "sensors/temp/data" DOES NOT match "sensors/+/telemetry"
@@ -100,6 +137,10 @@ void test_deny_sensor_invalid_topic_publish(void) {
     CU_ASSERT_EQUAL(result, -1);
 }
 
+/**
+ * @brief Tests denying an unknown client attempting a publish.
+ * Expects the rule logic to fall through and return -1.
+ */
 void test_deny_unknown_client_publish(void) {
     // Client "unknown-device" publishing to "sensors/temp/telemetry"
     // Fails TOP-001 client ID regex. TOP-002 has no publish permissions.
@@ -108,6 +149,10 @@ void test_deny_unknown_client_publish(void) {
     CU_ASSERT_EQUAL(result, -1);
 }
 
+/**
+ * @brief Tests dropping a wildcard subscription from a malicious client.
+ * Expects the rule to return 0 (drop).
+ */
 void test_drop_root_wildcard_subscription(void) {
     // Client "malicious-client" attempting to subscribe to "#"
     // Fails TOP-001 client ID regex. Matches TOP-002 client ID regex and topic.
@@ -116,6 +161,10 @@ void test_drop_root_wildcard_subscription(void) {
     CU_ASSERT_EQUAL(result, 0);
 }
 
+/**
+ * @brief Tests dropping a root wildcard subscription from a valid sensor.
+ * Expects the rule to return 0 (drop).
+ */
 void test_drop_sensor_root_wildcard_subscription(void) {
     // Client "sensor-123" attempting to subscribe to "+/#"
     // Matches TOP-001 client ID, but not TOP-001 subscribe topics.
@@ -125,6 +174,10 @@ void test_drop_sensor_root_wildcard_subscription(void) {
     CU_ASSERT_EQUAL(result, 0);
 }
 
+/**
+ * @brief Tests the fallback behavior when an empty ruleset is provided.
+ * Expects an immediate return of -1.
+ */
 void test_empty_rules_fallback(void) {
     // Pass count 0 to simulate no rules loaded
     // Should return -1 immediately
@@ -132,6 +185,10 @@ void test_empty_rules_fallback(void) {
     CU_ASSERT_EQUAL(result, -1);
 }
 
+/**
+ * @brief Tests a rule applying to everyone if the client regex is missing.
+ * Expects a rule with `has_client_id_regex == false` to evaluate the topic match.
+ */
 void test_missing_client_regex_applies_to_all(void) {
     // Create a rule with NO regex (has_client_id_regex = false)
     struct topic_rule no_regex_rule;
@@ -152,6 +209,10 @@ void test_missing_client_regex_applies_to_all(void) {
     free(no_regex_rule.permissions.publish);
 }
 
+/**
+ * @brief Tests fallback closure if a rule action contains a typo.
+ * Expects an unrecognized action to safely fail closed and return 0.
+ */
 void test_unrecognized_action_fails_closed(void) {
     struct topic_rule typo_rule = test_rules[0];
     typo_rule.action = "Allow"; // Capitalized typo!
@@ -201,3 +262,5 @@ int main() {
     
     return CU_get_error();
 }
+
+/** @} */

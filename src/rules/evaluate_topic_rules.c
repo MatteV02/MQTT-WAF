@@ -1,3 +1,10 @@
+/**
+ * @file evaluate_topic_rules.h
+ * @brief Header file for evaluating topic-based firewall rules.
+ * 
+ * @ingroup evaluate_topic_rules
+ */
+
 #include <stdbool.h>
 #include <regex.h>
 #include <string.h>

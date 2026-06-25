@@ -1,3 +1,14 @@
+/**
+ * @file test_evaluate_message_rules.c
+ * @brief Unit tests for the message payload rules evaluation module.
+ *
+ * @defgroup evaluate_message_rules_tests Message Rules Evuluator Tests
+ * @brief Unit tests for the message payload rules evaluation module.
+ * @ingroup rules_tests
+ *
+ * @{
+ */
+
 #include <string.h>
 #include <stdbool.h>
 #include <CUnit/Basic.h>
@@ -11,6 +22,11 @@
  * TEST CASES
  * --------------------------------------------------------- */
 
+ /**
+ * @brief Tests the detection and dropping of an SQL injection pattern.
+ * * Verifies that a rule written inside `assets/test_valid.yaml` configured to detect SQL syntax effectively drops 
+ * malicious payloads while allowing benign payloads to pass through to the fallback.
+ */
 void test_sql_injection_drop(void) {
     struct message_rule rule;
     memset(&rule, 0, sizeof(rule));
@@ -39,6 +55,11 @@ void test_sql_injection_drop(void) {
     regfree(&rule.compiled_payload_regex);
 }
 
+/**
+ * @brief Tests the invert match functionality, specifically for enforcing strict JSON.
+ * * Ensures that when `invert_match` is set to true, payloads failing to match
+ * the required regex pattern (e.g., a valid JSON structure) are correctly dropped.
+ */
 void test_strict_json_invert_match(void) {
     struct message_rule rule;
     memset(&rule, 0, sizeof(rule));
@@ -70,6 +91,11 @@ void test_strict_json_invert_match(void) {
     regfree(&rule.compiled_payload_regex);
 }
 
+/**
+ * @brief Tests the safety of evaluating raw, non-null-terminated buffers.
+ * * Confirms that the evaluation logic properly respects the provided `payloadlen`
+ * instead of over-reading into undefined memory spaces.
+ */
 void test_raw_buffer_safety(void) {
     struct message_rule rule;
     memset(&rule, 0, sizeof(rule));
@@ -95,6 +121,11 @@ void test_raw_buffer_safety(void) {
     regfree(&rule.compiled_payload_regex);
 }
 
+/**
+ * @brief Tests the system's behavior when an empty (0-byte) payload is received.
+ * * Verifies that zero-length payloads bypass regex matches appropriately and
+ * interact correctly with `invert_match` constraints.
+ */
 void test_empty_payload_handling(void) {
     struct message_rule rule;
     memset(&rule, 0, sizeof(rule));
@@ -160,3 +191,5 @@ int main(void) {
     CU_cleanup_registry();
     return CU_get_error();
 }
+
+/** @} */

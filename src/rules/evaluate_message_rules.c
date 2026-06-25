@@ -1,3 +1,9 @@
+/**
+ * @file evaluate_message_rules.c
+ * @brief Implementation of the MQTT message payload evaluation logic.
+ * @ingroup evaluate_message_rules
+ */
+
 #include <stdlib.h>
 #include <stdbool.h>
 #include <regex.h>

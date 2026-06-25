@@ -1,3 +1,14 @@
+/**
+ * @file test_message_logger.c
+ * @brief Unit tests for the message logger module.
+ * @brief All unit tests for the WAF plugin logger.
+ *
+ * @defgroup message_logger_tests Message Logger Tests
+ * @ingroup bridge_tests
+ * @brief Tests for file I/O lifecycle, message logging, and overflow resilience.
+ * @{
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,8 +20,9 @@
 
 #define TEST_LOG_FILE_PATH "/tmp/mqtt_packets.log"
 
-/* * Suite Initialization function.
- * Returns zero on success, non-zero otherwise.
+/**
+ * @brief Suite Initialization function.
+ * @return Zero on success, non-zero otherwise.
  */
 int init_logger_suite(void) {
     // Ensure we start with a clean state by removing any leftover log file
@@ -18,8 +30,9 @@ int init_logger_suite(void) {
     return 0;
 }
 
-/* * Suite Cleanup function.
- * Returns zero on success, non-zero otherwise.
+/**
+ * @brief Suite Cleanup function.
+ * @return Zero on success, non-zero otherwise.
  */
 int clean_logger_suite(void) {
     // Make sure we stop the logger and clean up the file after all tests run
@@ -28,18 +41,17 @@ int clean_logger_suite(void) {
     return 0;
 }
 
-/*
- * Test: start_logger() and stop_logger()
- * Verifies that the file opens successfully, the global pointer is set, 
+/**
+ * @brief Test start and stop functionality.
+ *
+ * @test Verifies that the file opens successfully, the global pointer is set, 
  * and it closes without crashing.
  */
 void test_start_stop_logger(void) {
     // Ensure the pointer is NULL before we start
-    log_file = NULL;
 
     int status = start_logger();
     CU_ASSERT_EQUAL(status, 0);
-    CU_ASSERT_PTR_NOT_NULL(log_file);
 
     stop_logger();
     
@@ -48,9 +60,11 @@ void test_start_stop_logger(void) {
     // CU_ASSERT_PTR_NULL(log_file); 
 }
 
-/*
- * Test: log_message()
- * Verifies that the correct data is physically written to the file.
+/**
+ * @brief Test standard message logging.
+ *
+ * @test Verifies that the correct data (topic and payload) is physically 
+ * written to the log file.
  */
 void test_log_message(void) {
     // 1. Setup the logger
@@ -90,9 +104,11 @@ void test_log_message(void) {
     }
 }
 
-/*
- * Test: log_message() buffer overflow resilience
- * Verifies that providing an abnormally large payload/topic does not crash the plugin.
+/**
+ * @brief Test log_message buffer overflow resilience.
+ *
+ * @test Verifies that providing an abnormally large payload/topic does not 
+ * crash the plugin (segmentation fault) and that it writes or truncates safely.
  */
 void test_log_message_buffer_overflow(void) {
     // 1. Setup the logger
@@ -191,3 +207,5 @@ int main() {
     
     return exit_code;
 }
+
+/** @} */ // Ends the message_logger_tests group

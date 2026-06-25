@@ -1,6 +1,11 @@
 /**
  * @file message_forwarder.h
  * @brief Code unit for forwarding inbound and outbound communication through an external broker.
+ * @defgroup message_forwarder
+ * @brief Code unit for forwarding inbound and outbound communication through an external broker.
+ * @ingroup bridge
+ * 
+ * @{
  */
 
 #ifndef MESSAGE_FORWARDER_H_
@@ -58,3 +63,5 @@ int subscription_forward(struct mosquitto *ext_client, const char *topic);
 void stop_forwarder(struct mosquitto * ext_client);
 
 #endif
+
+/** @} */

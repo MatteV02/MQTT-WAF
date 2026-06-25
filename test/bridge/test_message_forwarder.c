@@ -2,8 +2,8 @@
  * @file test_message_forwarder.c
  * @brief Unit tests for the message forwarder module.
  * @brief All unit tests for the WAF plugin.
- * * * @defgroup message_forwarder_tests Message Forwarder Tests
- * @ingroup tests
+ * @defgroup message_forwarder_tests Message Forwarder Tests
+ * @ingroup bridge_tests
  * @brief Tests for start/stop lifecycle and message filtering.
  * @{
  */

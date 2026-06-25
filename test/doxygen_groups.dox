@@ -1,4 +1,12 @@
 /**
  * @defgroup tests Unit Tests
  * @brief All unit tests for the WAF plugin.
+
+ * @defgroup bridge_tests Bridge unit Tests
+ * @brief All bridge unit tests.
+ * @ingroup tests
+
+ * @defgroup rules_tests Rules unit Tests
+ * @brief All firewall rules unit tests.
+ * @ingroup tests
  */

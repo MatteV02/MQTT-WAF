@@ -1,3 +1,14 @@
+/**
+ * @file message_forwarder.c
+ * @brief MQTT message logging utility for Mosquitto broker plugins.
+ *
+ * @defgroup message_forwarder
+ * @brief Code unit for forwarding inbound and outbound communication through an external broker.
+ * @ingroup bridge
+ * 
+ * @{
+ */
+
 #include "bridge/message_forwarder.h"
 
 #include <mosquitto.h>
@@ -106,3 +117,5 @@ void stop_forwarder(struct mosquitto * ext_client) {
     }
     mosquitto_lib_cleanup();
 }
+
+/** @} */

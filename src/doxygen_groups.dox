@@ -1,0 +1,12 @@
+/**
+ * @defgroup units Units
+ * @brief All code units of the WAF plugin.
+
+ * @defgroup bridge Bridge code unit
+ * @brief All bridge code unit.
+ * @ingroup units
+
+ * @defgroup rules Rules unit Tests
+ * @brief All firewall rules code unit.
+ * @ingroup units
+ */

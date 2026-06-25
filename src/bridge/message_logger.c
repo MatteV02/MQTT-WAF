@@ -1,3 +1,15 @@
+/**
+ * @file message_logger.c
+ * @brief Implementation of the MQTT message logging utility.
+ *
+ * @defgroup message_logger
+ * @brief MQTT message logging utility for Mosquitto broker plugins.
+ * @ingroup bridge
+ * 
+ * @{
+ */
+
+#include <stdio.h>
 #include "bridge/message_logger.h"
 
 FILE *log_file = NULL;
@@ -33,3 +45,5 @@ void stop_logger() {
         log_file = NULL;
     }
 }
+
+/** @} */

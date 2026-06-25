@@ -23,53 +23,11 @@ static const cyaml_schema_value_t string_schema = {
     CYAML_VALUE_STRING(CYAML_FLAG_POINTER, char, 0, CYAML_UNLIMITED)
 };
 
-/* 1) Connection Rules Schema */
-static const cyaml_schema_field_t connection_fields_schema[] = {
-    CYAML_FIELD_STRING_PTR("id", CYAML_FLAG_POINTER, struct connection_rule, id, 0, CYAML_UNLIMITED),
-    CYAML_FIELD_STRING_PTR("name", CYAML_FLAG_POINTER, struct connection_rule, name, 0, CYAML_UNLIMITED),
-    CYAML_FIELD_STRING_PTR("action", CYAML_FLAG_POINTER, struct connection_rule, action, 0, CYAML_UNLIMITED),
-    CYAML_FIELD_STRING_PTR("ip_range", CYAML_FLAG_POINTER | CYAML_FLAG_OPTIONAL, struct connection_rule, ip_range, 0, CYAML_UNLIMITED),
-    CYAML_FIELD_STRING_PTR("client_id_regex", CYAML_FLAG_POINTER | CYAML_FLAG_OPTIONAL, struct connection_rule, client_id_regex, 0, CYAML_UNLIMITED),
-    CYAML_FIELD_BOOL("require_tls", CYAML_FLAG_OPTIONAL, struct connection_rule, require_tls),
-    CYAML_FIELD_SEQUENCE_COUNT("ip_list", CYAML_FLAG_POINTER | CYAML_FLAG_OPTIONAL, struct connection_rule, ip_list, ip_list_count, &string_schema, 0, CYAML_UNLIMITED),
-    CYAML_FIELD_END
-};
-
-static const cyaml_schema_value_t connection_schema = {
-    CYAML_VALUE_MAPPING(CYAML_FLAG_DEFAULT, struct connection_rule, connection_fields_schema)
-};
-
-/* 2) Authentication Rules Schema */
-static const cyaml_schema_field_t auth_trigger_fields[] = {
-    CYAML_FIELD_INT("max_failed_attempts", CYAML_FLAG_DEFAULT, struct auth_trigger, max_failed_attempts),
-    CYAML_FIELD_STRING_PTR("time_window", CYAML_FLAG_POINTER, struct auth_trigger, time_window, 0, CYAML_UNLIMITED),
-    CYAML_FIELD_END
-};
-
-static const cyaml_schema_field_t auth_enforcement_fields[] = {
-    CYAML_FIELD_STRING_PTR("lockout_duration", CYAML_FLAG_POINTER, struct auth_enforcement, lockout_duration, 0, CYAML_UNLIMITED),
-    CYAML_FIELD_STRING_PTR("target", CYAML_FLAG_POINTER, struct auth_enforcement, target, 0, CYAML_UNLIMITED),
-    CYAML_FIELD_END
-};
-
-static const cyaml_schema_field_t authentication_fields_schema[] = {
-    CYAML_FIELD_STRING_PTR("id", CYAML_FLAG_POINTER, struct authentication_rule, id, 0, CYAML_UNLIMITED),
-    CYAML_FIELD_STRING_PTR("name", CYAML_FLAG_POINTER, struct authentication_rule, name, 0, CYAML_UNLIMITED),
-    CYAML_FIELD_STRING_PTR("action", CYAML_FLAG_POINTER, struct authentication_rule, action, 0, CYAML_UNLIMITED),
-    CYAML_FIELD_MAPPING("trigger", CYAML_FLAG_DEFAULT | CYAML_FLAG_OPTIONAL, struct authentication_rule, trigger, auth_trigger_fields),
-    CYAML_FIELD_MAPPING("enforcement", CYAML_FLAG_DEFAULT | CYAML_FLAG_OPTIONAL, struct authentication_rule, enforcement, auth_enforcement_fields),
-    CYAML_FIELD_END
-};
-
-static const cyaml_schema_value_t authentication_schema = {
-    CYAML_VALUE_MAPPING(CYAML_FLAG_DEFAULT, struct authentication_rule, authentication_fields_schema)
-};
-
 /* 3) Message Rules Schema */
 static const cyaml_schema_field_t message_fields_schema[] = {
     CYAML_FIELD_STRING_PTR("id", CYAML_FLAG_POINTER, struct message_rule, id, 0, CYAML_UNLIMITED),
     CYAML_FIELD_STRING_PTR("name", CYAML_FLAG_POINTER, struct message_rule, name, 0, CYAML_UNLIMITED),
-    CYAML_FIELD_STRING_PTR("action", CYAML_FLAG_POINTER, struct message_rule, action, 0, CYAML_UNLIMITED),
+    CYAML_FIELD_STRING_PTR("action", CYAML_FLAG_POINTER | CYAML_FLAG_OPTIONAL, struct message_rule, action, 0, CYAML_UNLIMITED),
     CYAML_FIELD_SEQUENCE_COUNT("topics", CYAML_FLAG_POINTER, struct message_rule, topics, topics_count, &string_schema, 0, CYAML_UNLIMITED),
     CYAML_FIELD_STRING_PTR("payload_regex", CYAML_FLAG_POINTER | CYAML_FLAG_OPTIONAL, struct message_rule, payload_regex, 0, CYAML_UNLIMITED),
     CYAML_FIELD_BOOL("log", CYAML_FLAG_OPTIONAL, struct message_rule, log),
@@ -91,7 +49,7 @@ static const cyaml_schema_field_t topic_permissions_fields[] = {
 static const cyaml_schema_field_t topic_fields_schema[] = {
     CYAML_FIELD_STRING_PTR("id", CYAML_FLAG_POINTER, struct topic_rule, id, 0, CYAML_UNLIMITED),
     CYAML_FIELD_STRING_PTR("name", CYAML_FLAG_POINTER, struct topic_rule, name, 0, CYAML_UNLIMITED),
-    CYAML_FIELD_STRING_PTR("action", CYAML_FLAG_POINTER, struct topic_rule, action, 0, CYAML_UNLIMITED),
+    CYAML_FIELD_STRING_PTR("action", CYAML_FLAG_POINTER | CYAML_FLAG_OPTIONAL, struct topic_rule, action, 0, CYAML_UNLIMITED),
     CYAML_FIELD_STRING_PTR("client_id_regex", CYAML_FLAG_POINTER | CYAML_FLAG_OPTIONAL, struct topic_rule, client_id_regex, 0, CYAML_UNLIMITED),
     CYAML_FIELD_MAPPING("permissions", CYAML_FLAG_DEFAULT | CYAML_FLAG_OPTIONAL, struct topic_rule, permissions, topic_permissions_fields),
     CYAML_FIELD_END
@@ -101,44 +59,17 @@ static const cyaml_schema_value_t topic_schema = {
     CYAML_VALUE_MAPPING(CYAML_FLAG_DEFAULT, struct topic_rule, topic_fields_schema)
 };
 
-/* 5) Rate-Limiting Rules Schema */
-static const cyaml_schema_field_t rate_quota_fields[] = {
-    CYAML_FIELD_INT("max_messages", CYAML_FLAG_DEFAULT, struct rate_quota, max_messages),
-    CYAML_FIELD_STRING_PTR("time_window", CYAML_FLAG_POINTER, struct rate_quota, time_window, 0, CYAML_UNLIMITED),
-    CYAML_FIELD_END
-};
-
-static const cyaml_schema_field_t rate_limiting_fields_schema[] = {
-    CYAML_FIELD_STRING_PTR("id", CYAML_FLAG_POINTER, struct rate_limiting_rule, id, 0, CYAML_UNLIMITED),
-    CYAML_FIELD_STRING_PTR("name", CYAML_FLAG_POINTER, struct rate_limiting_rule, name, 0, CYAML_UNLIMITED),
-    CYAML_FIELD_STRING_PTR("action", CYAML_FLAG_POINTER, struct rate_limiting_rule, action, 0, CYAML_UNLIMITED),
-    CYAML_FIELD_STRING_PTR("client_id_regex", CYAML_FLAG_POINTER | CYAML_FLAG_OPTIONAL, struct rate_limiting_rule, client_id_regex, 0, CYAML_UNLIMITED),
-    CYAML_FIELD_STRING_PTR("packet_type", CYAML_FLAG_POINTER | CYAML_FLAG_OPTIONAL, struct rate_limiting_rule, packet_type, 0, CYAML_UNLIMITED),
-    CYAML_FIELD_STRING_PTR("ip_range", CYAML_FLAG_POINTER | CYAML_FLAG_OPTIONAL, struct rate_limiting_rule, ip_range, 0, CYAML_UNLIMITED),
-    CYAML_FIELD_MAPPING("quota", CYAML_FLAG_DEFAULT | CYAML_FLAG_OPTIONAL, struct rate_limiting_rule, quota, rate_quota_fields),
-    CYAML_FIELD_END
-};
-
-static const cyaml_schema_value_t rate_limiting_schema = {
-    CYAML_VALUE_MAPPING(CYAML_FLAG_DEFAULT, struct rate_limiting_rule, rate_limiting_fields_schema)
-};
-
 /* Rules Object Schema Grouping Arrays Together */
 static const cyaml_schema_field_t rules_section_fields[] = {
-    CYAML_FIELD_SEQUENCE_COUNT("connection", CYAML_FLAG_POINTER | CYAML_FLAG_OPTIONAL, struct rules_section, connection, connection_count, &connection_schema, 0, CYAML_UNLIMITED),
-    CYAML_FIELD_SEQUENCE_COUNT("authentication", CYAML_FLAG_POINTER | CYAML_FLAG_OPTIONAL, struct rules_section, authentication, authentication_count, &authentication_schema, 0, CYAML_UNLIMITED),
     CYAML_FIELD_SEQUENCE_COUNT("message", CYAML_FLAG_POINTER | CYAML_FLAG_OPTIONAL, struct rules_section, message, message_count, &message_schema, 0, CYAML_UNLIMITED),
     CYAML_FIELD_SEQUENCE_COUNT("topic", CYAML_FLAG_POINTER | CYAML_FLAG_OPTIONAL, struct rules_section, topic, topic_count, &topic_schema, 0, CYAML_UNLIMITED),
-    CYAML_FIELD_SEQUENCE_COUNT("rate_limiting", CYAML_FLAG_POINTER | CYAML_FLAG_OPTIONAL, struct rules_section, rate_limiting, rate_limiting_count, &rate_limiting_schema, 0, CYAML_UNLIMITED),
     CYAML_FIELD_END
 };
 
 /* Global and Defaults Policies Schema */
 static const cyaml_schema_field_t default_policies_fields[] = {
-    CYAML_FIELD_STRING_PTR("connection", CYAML_FLAG_POINTER, struct default_policies, connection, 0, CYAML_UNLIMITED),
-    CYAML_FIELD_STRING_PTR("authentication", CYAML_FLAG_POINTER, struct default_policies, authentication, 0, CYAML_UNLIMITED),
-    CYAML_FIELD_STRING_PTR("publish", CYAML_FLAG_POINTER, struct default_policies, publish, 0, CYAML_UNLIMITED),
-    CYAML_FIELD_STRING_PTR("subscribe", CYAML_FLAG_POINTER, struct default_policies, subscribe, 0, CYAML_UNLIMITED),
+    CYAML_FIELD_STRING_PTR("publish", CYAML_FLAG_POINTER | CYAML_FLAG_OPTIONAL, struct default_policies, publish, 0, CYAML_UNLIMITED),
+    CYAML_FIELD_STRING_PTR("subscribe", CYAML_FLAG_POINTER | CYAML_FLAG_OPTIONAL, struct default_policies, subscribe, 0, CYAML_UNLIMITED),
     CYAML_FIELD_END
 };
 
@@ -212,19 +143,8 @@ static bool compile_single_regex(regex_t *compiled, const char *pattern, const c
  */
 static int compile_rule_regexes(struct waf_config *config) {
     /* Initialize all has_regex flags to false first, ensuring safe cleanup if we fail halfway */
-    for (unsigned i = 0; i < config->rules.connection_count; i++) config->rules.connection[i].has_client_id_regex = false;
     for (unsigned i = 0; i < config->rules.message_count; i++)    config->rules.message[i].has_payload_regex = false;
     for (unsigned i = 0; i < config->rules.topic_count; i++)      config->rules.topic[i].has_client_id_regex = false;
-    for (unsigned i = 0; i < config->rules.rate_limiting_count; i++) config->rules.rate_limiting[i].has_client_id_regex = false;
-
-    /* Compile Connection Regexes */
-    for (unsigned i = 0; i < config->rules.connection_count; i++) {
-        struct connection_rule *r = &config->rules.connection[i];
-        if (r->client_id_regex) {
-            if (!compile_single_regex(&r->compiled_client_id_regex, r->client_id_regex, r->id, "connection")) return -1;
-            r->has_client_id_regex = true;
-        }
-    }
 
     /* Compile Message Regexes */
     for (unsigned i = 0; i < config->rules.message_count; i++) {
@@ -244,15 +164,6 @@ static int compile_rule_regexes(struct waf_config *config) {
         }
     }
 
-    /* Compile Rate Limiting Regexes */
-    for (unsigned i = 0; i < config->rules.rate_limiting_count; i++) {
-        struct rate_limiting_rule *r = &config->rules.rate_limiting[i];
-        if (r->client_id_regex) {
-            if (!compile_single_regex(&r->compiled_client_id_regex, r->client_id_regex, r->id, "rate_limiting")) return -1;
-            r->has_client_id_regex = true;
-        }
-    }
-
     return 0;
 }
 
@@ -268,42 +179,8 @@ static int compile_rule_regexes(struct waf_config *config) {
     if (!config) return;
 
     /* Global Defaults */
-    if (!config->default_policies.connection)     config->default_policies.connection = strdup("allow");
-    if (!config->default_policies.authentication) config->default_policies.authentication = strdup("allow");
     if (!config->default_policies.publish)        config->default_policies.publish = strdup("allow");
     if (!config->default_policies.subscribe)      config->default_policies.subscribe = strdup("allow");
-
-    /* Connection Rules */
-    for (unsigned i = 0; i < config->rules.connection_count; i++) {
-        struct connection_rule *r = &config->rules.connection[i];
-        if (!r->action) r->action = strdup("allow");
-        
-        // r->require_tls defaults to `false` via libcyaml zero-init.
-        // If you want it to default to true, uncomment the line below:
-        // /* r->require_tls = true; // (Requires adding a separate "is_present" tracking boolean to schema if you want to distinguish explicit 'false' from missing) */
-    }
-
-    /* Authentication Rules */
-    for (unsigned i = 0; i < config->rules.authentication_count; i++) {
-        struct authentication_rule *r = &config->rules.authentication[i];
-        if (!r->action) r->action = strdup("allow");
-
-        // trigger mapping defaults
-        if (r->trigger.max_failed_attempts == 0) {
-            r->trigger.max_failed_attempts = 5; 
-        }
-        if (!r->trigger.time_window) {
-            r->trigger.time_window = strdup("60s");
-        }
-
-        // enforcement mapping defaults
-        if (!r->enforcement.lockout_duration) {
-            r->enforcement.lockout_duration = strdup("5m");
-        }
-        if (!r->enforcement.target) {
-            r->enforcement.target = strdup("ip"); 
-        }
-    }
 
     /* Message Rules */
     for (unsigned i = 0; i < config->rules.message_count; i++) {
@@ -325,22 +202,6 @@ static int compile_rule_regexes(struct waf_config *config) {
         // r->permissions mapping: 
         // If omitted, publish_count and subscribe_count are naturally 0, 
         // and their string arrays are NULL. This safely evaluates to "no explicit permissions defined".
-    }
-
-    /* Rate Limiting Rules */
-    for (unsigned i = 0; i < config->rules.rate_limiting_count; i++) {
-        struct rate_limiting_rule *r = &config->rules.rate_limiting[i];
-        if (!r->action) r->action = strdup("allow");
-
-        // r->client_id_regex and r->ip_range safely default to NULL.
-
-        // quota mapping defaults
-        if (r->quota.max_messages == 0) {
-            r->quota.max_messages = 100; // Default limit
-        }
-        if (!r->quota.time_window) {
-            r->quota.time_window = strdup("1s"); // Default rate limit window
-        }
     }
 }
 
@@ -382,17 +243,11 @@ void free_waf_rules(struct waf_config *config) {
     if (config != NULL) {
         
         /* 1) Free Compiled Regexes */
-        for (unsigned i = 0; i < config->rules.connection_count; i++) {
-            if (config->rules.connection[i].has_client_id_regex) regfree(&config->rules.connection[i].compiled_client_id_regex);
-        }
         for (unsigned i = 0; i < config->rules.message_count; i++) {
             if (config->rules.message[i].has_payload_regex) regfree(&config->rules.message[i].compiled_payload_regex);
         }
         for (unsigned i = 0; i < config->rules.topic_count; i++) {
             if (config->rules.topic[i].has_client_id_regex) regfree(&config->rules.topic[i].compiled_client_id_regex);
-        }
-        for (unsigned i = 0; i < config->rules.rate_limiting_count; i++) {
-            if (config->rules.rate_limiting[i].has_client_id_regex) regfree(&config->rules.rate_limiting[i].compiled_client_id_regex);
         }
 
         /* 2) Free Struct Memory Allocated by CYAML */
@@ -413,22 +268,8 @@ void print_waf_rules(struct waf_config *config) {
     printf("Version: %s\n\n", config->version ? config->version : "Unknown");
 
     printf("[Default Policies]\n");
-    printf("  Connection: %s\n", config->default_policies.connection);
-    printf("  Auth:       %s\n", config->default_policies.authentication);
     printf("  Publish:    %s\n", config->default_policies.publish);
     printf("  Subscribe:  %s\n\n", config->default_policies.subscribe);
-
-    printf("[Connection Rules] Count: %u\n", config->rules.connection_count);
-    for (unsigned i = 0; i < config->rules.connection_count; i++) {
-        struct connection_rule *r = &config->rules.connection[i];
-        printf("  - %s [%s] -> %s\n", r->id, r->name, r->action);
-    }
-
-    printf("\n[Authentication Rules] Count: %u\n", config->rules.authentication_count);
-    for (unsigned i = 0; i < config->rules.authentication_count; i++) {
-        struct authentication_rule *r = &config->rules.authentication[i];
-        printf("  - %s [%s] -> %s (Lockout: %s)\n", r->id, r->name, r->action, r->enforcement.lockout_duration);
-    }
 
     printf("\n[Message Rules] Count: %u\n", config->rules.message_count);
     for (unsigned i = 0; i < config->rules.message_count; i++) {
@@ -443,11 +284,6 @@ void print_waf_rules(struct waf_config *config) {
         printf("  - %s [%s] -> %s\n", r->id, r->name, r->action);
     }
 
-    printf("\n[Rate Limiting Rules] Count: %u\n", config->rules.rate_limiting_count);
-    for (unsigned i = 0; i < config->rules.rate_limiting_count; i++) {
-        struct rate_limiting_rule *r = &config->rules.rate_limiting[i];
-        printf("  - %s [%s] -> %s (Max: %d per %s)\n", r->id, r->name, r->action, r->quota.max_messages, r->quota.time_window);
-    }
     printf("=========================================\n\n");
     
     // Force flush stdout in case Mosquitto is running as a background daemon

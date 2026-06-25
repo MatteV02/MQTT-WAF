@@ -23,53 +23,8 @@
  * @brief Defines the default fallback policies for the WAF.
  */
 struct default_policies {
-    char *connection;       /**< Default action for connections (e.g., "allow" or "deny") */
-    char *authentication;   /**< Default action for authentication */
     char *publish;          /**< Default action for publish events */
     char *subscribe;        /**< Default action for subscribe events */
-};
-
-/**
- * @brief Defines a rule for managing incoming MQTT connections.
- */
-struct connection_rule {
-    char *id;                         /**< Unique identifier for the rule */
-    char *name;                       /**< Human-readable name of the rule */
-    char *action;                     /**< Action to take (e.g., "allow" or "deny") */
-    char *ip_range;                   /**< CIDR block or IP range to match */
-    char *client_id_regex;            /**< Raw regular expression string for matching client IDs */
-    regex_t compiled_client_id_regex; /**< Compiled regex object for client ID matching */
-    bool has_client_id_regex;         /**< Flag indicating if the client ID regex was successfully compiled */
-    bool require_tls;                 /**< Flag enforcing TLS for the connection */
-    char **ip_list;                   /**< Array of specific IP addresses */
-    unsigned ip_list_count;           /**< Number of IPs in the ip_list array */
-};
-
-/**
- * @brief Defines the trigger conditions for an authentication rule.
- */
-struct auth_trigger {
-    int max_failed_attempts; /**< Maximum number of failed attempts allowed */
-    char *time_window;       /**< Time window for the failed attempts (e.g., "60s") */
-};
-
-/**
- * @brief Defines the enforcement action taken when an auth trigger is hit.
- */
-struct auth_enforcement {
-    char *lockout_duration; /**< How long the client is locked out (e.g., "5m") */
-    char *target;           /**< Target of the enforcement (e.g., "ip" or "client_id") */
-};
-
-/**
- * @brief Defines a rule for handling MQTT authentication.
- */
-struct authentication_rule {
-    char *id;                            /**< Unique identifier for the rule */
-    char *name;                          /**< Human-readable name of the rule */
-    char *action;                        /**< Action to take (e.g., "allow" or "deny") */
-    struct auth_trigger trigger;         /**< Trigger conditions for the rule */
-    struct auth_enforcement enforcement; /**< Enforcement constraints applied upon triggering */
 };
 
 /**
@@ -112,42 +67,13 @@ struct topic_rule {
 };
 
 /**
- * @brief Defines the quota constraints for a rate-limiting rule.
- */
-struct rate_quota {
-    int max_messages;  /**< Maximum number of messages allowed */
-    char *time_window; /**< Time window for the quota (e.g., "1s") */
-};
-
-/**
- * @brief Defines a rule for throttling or rate-limiting MQTT traffic.
- */
-struct rate_limiting_rule {
-    char *id;                         /**< Unique identifier for the rule */
-    char *name;                       /**< Human-readable name of the rule */
-    char *action;                     /**< Action to take (e.g., "throttle" or "disconnect") */
-    char *client_id_regex;            /**< Raw regular expression string for matching client IDs */
-    regex_t compiled_client_id_regex; /**< Compiled regex object for client ID matching */
-    bool has_client_id_regex;         /**< Flag indicating if the client ID regex was successfully compiled */
-    char *packet_type;                /**< The type of MQTT packet being limited (e.g., "PUBLISH") */
-    char *ip_range;                   /**< CIDR block or IP range to match */
-    struct rate_quota quota;          /**< Quota definitions for the rule */
-};
-
-/**
  * @brief Wrapper containing all rule categories separated into arrays.
  */
 struct rules_section {
-    struct connection_rule *connection;         /**< Array of connection rules */
-    unsigned connection_count;                  /**< Number of connection rules */
-    struct authentication_rule *authentication; /**< Array of authentication rules */
-    unsigned authentication_count;              /**< Number of authentication rules */
     struct message_rule *message;               /**< Array of message rules */
     unsigned message_count;                     /**< Number of message rules */
     struct topic_rule *topic;                   /**< Array of topic rules */
     unsigned topic_count;                       /**< Number of topic rules */
-    struct rate_limiting_rule *rate_limiting;   /**< Array of rate-limiting rules */
-    unsigned rate_limiting_count;               /**< Number of rate-limiting rules */
 };
 
 /**

@@ -20,15 +20,39 @@
 #include "rules/waf_rules_parse.h"
 #include "rules/firewall_engine.h"
 
+/**
+ * @brief Unique identifier for this plugin instance.
+ * Assigned by the Mosquitto broker during initialization.
+ */
 static mosquitto_plugin_id_t *plugin_id = NULL;
+
+/**
+ * @brief External Mosquitto client used for forwarding approved messages.
+ */
 static struct mosquitto *ext_client = NULL;
 
-// Global pointer for our parsed settings
+/**
+ * @brief Global pointer for parsed YAML plugin settings.
+ */
 static struct settings *plugin_config = NULL;
 
-// Global pointer for our WAF rules
+/**
+ * @brief Global pointer for the parsed Web Application Firewall (WAF) rules.
+ */
 static struct waf_config *waf_rules = NULL;
 
+/**
+ * @brief Callback function triggered for MQTT ACL checks.
+ *
+ * Evaluates incoming requests against the Web Application Firewall (WAF) engine.
+ * If approved, forwards the message or subscription via the bridge logic and grants access.
+ * Locally injected plugins bypass this WAF logic entirely.
+ *
+ * @param event The event type triggered (expected to be MOSQ_EVT_ACL_CHECK).
+ * @param event_data Pointer to a `mosquitto_evt_acl_check` structure containing message details.
+ * @param userdata Custom user data passed during callback registration (unused).
+ * @return `MOSQ_ERR_SUCCESS` if access is granted, `MOSQ_ERR_ACL_DENIED` if blocked by the WAF.
+ */
 int callback_acl_check(int event, void *event_data, void *userdata) {
     struct mosquitto_evt_acl_check *msg = event_data;
 
@@ -74,7 +98,14 @@ int callback_acl_check(int event, void *event_data, void *userdata) {
     return MOSQ_ERR_SUCCESS; 
 }
 
-/* The broker calls this to check if the plugin is compatible */
+/**
+ * @brief Verifies plugin compatibility with the running broker version.
+ *
+ * The broker calls this during the plugin load phase to ensure API compatibility.
+ * * @param supported_version_count Number of API versions supported by the broker.
+ * @param supported_versions Array of supported API version integers.
+ * @return The agreed version number (5), or -1 if no compatible version is found.
+ */
 int mosquitto_plugin_version(int supported_version_count, const int *supported_versions) {
     for (int i = 0; i < supported_version_count; i++) {
         if (supported_versions[i] == 5) {
@@ -84,7 +115,14 @@ int mosquitto_plugin_version(int supported_version_count, const int *supported_v
     return -1;
 }
 
-/* Called when the plugin is loaded */
+/**
+ * @brief Verifies plugin compatibility with the running broker version.
+ *
+ * The broker calls this during the plugin load phase to ensure API compatibility.
+ * * @param supported_version_count Number of API versions supported by the broker.
+ * @param supported_versions Array of supported API version integers.
+ * @return The agreed version number (5), or -1 if no compatible version is found.
+ */
 int mosquitto_plugin_init(mosquitto_plugin_id_t *identifier, void **user_data, struct mosquitto_opt *opts, int opt_count) {
     plugin_id = identifier;
     
@@ -147,7 +185,17 @@ int mosquitto_plugin_init(mosquitto_plugin_id_t *identifier, void **user_data, s
     return MOSQ_ERR_SUCCESS;
 }
 
-/* Called when the broker is shutting down */
+/**
+ * @brief Cleans up resources when the broker shuts down or unloads the plugin.
+ *
+ * Unregisters event callbacks, stops the message forwarder and logger, and gracefully 
+ * frees allocated memory for plugin settings and WAF rules to prevent memory leaks.
+ *
+ * @param user_data Pointer to arbitrary user data.
+ * @param opts Array of plugin options from mosquitto.conf.
+ * @param opt_count Number of elements in the `opts` array.
+ * @return `MOSQ_ERR_SUCCESS` upon successful cleanup.
+ */
 int mosquitto_plugin_cleanup(void *user_data, struct mosquitto_opt *opts, int opt_count) {
     // Unregister the callback
     mosquitto_callback_unregister(plugin_id, MOSQ_EVT_ACL_CHECK, callback_acl_check, NULL);

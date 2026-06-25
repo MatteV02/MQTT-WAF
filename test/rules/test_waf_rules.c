@@ -10,6 +10,7 @@
  */
 
 #include <CUnit/Basic.h>
+#include <CUnit/CUnit.h>
 
 #include "rules/waf_rules_parse.h"
 
@@ -30,18 +31,9 @@ void test_valid_configuration(void) {
 
     /* Verify Global config */
     CU_ASSERT_STRING_EQUAL(config->version, "1.0");
-    CU_ASSERT_STRING_EQUAL(config->default_policies.connection, "deny");
 
-    /* Verify Connection Rules */
-    CU_ASSERT_EQUAL(config->rules.connection_count, 1);
-    CU_ASSERT_STRING_EQUAL(config->rules.connection[0].id, "CONN-001");
-    CU_ASSERT_STRING_EQUAL(config->rules.connection[0].action, "deny");
-    CU_ASSERT_TRUE(config->rules.connection[0].require_tls);
-    CU_ASSERT_EQUAL(config->rules.connection[0].ip_list_count, 2);
-    CU_ASSERT_STRING_EQUAL(config->rules.connection[0].ip_list[0], "10.0.0.1");
-
-    /* Verify Regex compiled successfully */
-    CU_ASSERT_TRUE(config->rules.connection[0].has_client_id_regex);
+    CU_ASSERT_STRING_EQUAL(config->default_policies.publish, "allow");
+    CU_ASSERT_STRING_EQUAL(config->default_policies.subscribe, "allow");
 
     /* Verify Message Rules */
     CU_ASSERT_EQUAL(config->rules.message_count, 1);
@@ -60,23 +52,29 @@ void test_defaults_application(void) {
     struct waf_config *config = load_waf_rules("test/rules/assets/test_default.yaml");
     CU_ASSERT_PTR_NOT_NULL_FATAL(config);
 
-    /* Test Authentication Rule Defaults */
-    CU_ASSERT_EQUAL(config->rules.authentication_count, 1);
-    struct authentication_rule *auth_rule = &config->rules.authentication[0];
-    
-    CU_ASSERT_STRING_EQUAL(auth_rule->action, "allow");
-    CU_ASSERT_EQUAL(auth_rule->trigger.max_failed_attempts, 5); // Defaulted
-    CU_ASSERT_STRING_EQUAL(auth_rule->trigger.time_window, "60s"); // Defaulted
-    CU_ASSERT_STRING_EQUAL(auth_rule->enforcement.lockout_duration, "5m"); // Defaulted
-    CU_ASSERT_STRING_EQUAL(auth_rule->enforcement.target, "ip"); // Defaulted
+    /* Verify Global Default Policies */
+    CU_ASSERT_STRING_EQUAL(config->default_policies.publish, "allow");
+    CU_ASSERT_STRING_EQUAL(config->default_policies.subscribe, "allow");
 
-    /* Test Rate Limiting Defaults */
-    CU_ASSERT_EQUAL(config->rules.rate_limiting_count, 1);
-    struct rate_limiting_rule *rl_rule = &config->rules.rate_limiting[0];
+    /* Verify Message Rule Defaults */
+    CU_ASSERT_TRUE_FATAL(config->rules.message_count > 0);
+    CU_ASSERT_STRING_EQUAL(config->rules.message[0].action, "allow");
+    CU_ASSERT_FALSE(config->rules.message[0].log);
+    CU_ASSERT_FALSE(config->rules.message[0].invert_match);
+    CU_ASSERT_FALSE(config->rules.message[0].has_payload_regex);
+    CU_ASSERT_PTR_NULL(config->rules.message[0].payload_regex);
+
+    /* Verify Topic Rule Defaults */
+    CU_ASSERT_TRUE_FATAL(config->rules.topic_count > 0);
+    CU_ASSERT_STRING_EQUAL(config->rules.topic[0].action, "allow");
+    CU_ASSERT_FALSE(config->rules.topic[0].has_client_id_regex);
+    CU_ASSERT_PTR_NULL(config->rules.topic[0].client_id_regex);
     
-    CU_ASSERT_STRING_EQUAL(rl_rule->action, "allow");
-    CU_ASSERT_EQUAL(rl_rule->quota.max_messages, 100); // Defaulted
-    CU_ASSERT_STRING_EQUAL(rl_rule->quota.time_window, "1s"); // Defaulted
+    /* Verify Topic Permissions Defaults */
+    CU_ASSERT_EQUAL(config->rules.topic[0].permissions.publish_count, 0);
+    CU_ASSERT_PTR_NULL(config->rules.topic[0].permissions.publish);
+    CU_ASSERT_EQUAL(config->rules.topic[0].permissions.subscribe_count, 0);
+    CU_ASSERT_PTR_NULL(config->rules.topic[0].permissions.subscribe);
 
     free_waf_rules(config);
 }

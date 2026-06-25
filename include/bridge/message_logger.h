@@ -4,7 +4,7 @@
  * * This module provides a simple interface to initialize a log file, 
  * write MQTT message details (such as topic, QoS, retain flag, and payload) 
  * to disk, and safely clean up the file handles.
- * @defgroup message_logger
+ * @defgroup message_logger Message Logger
  * @brief MQTT message logging utility for Mosquitto broker plugins.
  * @ingroup bridge
  * 

@@ -1,7 +1,7 @@
 /**
  * @file message_forwarder.h
  * @brief Code unit for forwarding inbound and outbound communication through an external broker.
- * @defgroup message_forwarder
+ * @defgroup message_forwarder Message forwarder
  * @brief Code unit for forwarding inbound and outbound communication through an external broker.
  * @ingroup bridge
  * 

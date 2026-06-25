@@ -16,37 +16,7 @@ default_policies:
 # ---------------------------------------------------------
 rules:
 
-  # 1) Connection Rules
-  # Filter based on network and client attributes during the CONNECT packet.
-  connection:
-    - id: "CONN-001"
-      name: "Allow internal IoT subnet"
-      action: allow
-      ip_range: "10.0.0.0/8"
-      client_id_regex: "^internal-device-[0-9]+$"
-      require_tls: true
-
-    - id: "CONN-002"
-      name: "Block known malicious IPs"
-      action: drop
-      ip_list:
-        - "198.51.100.45"
-        - "203.0.113.8"
-
-  # 2) Authentication Rules
-  # Detect and prevent credential misuse.
-  authentication:
-    - id: "AUTH-001"
-      name: "Prevent brute force attacks"
-      action: lockout
-      trigger:
-        max_failed_attempts: 5
-        time_window: "1m"    # Look back window
-      enforcement:
-        lockout_duration: "15m"
-        target: "ip_and_client_id" # What to lock out
-
-  # 3) Message Rules
+  # 1) Message Rules
   # Inspect PUBLISH packet payloads. Uses regex matching as requested.
   message:
     - id: "MSG-001"
@@ -66,7 +36,7 @@ rules:
       payload_regex: "^\\{.*\\}$"
       invert_match: true # Drops the packet if the regex DOES NOT match
 
-  # 4) Topic Rules
+  # 2) Topic Rules
   # Access Control Lists (ACLs) using MQTT metacharacters (+ and #).
   topic:
     - id: "TOP-001"
@@ -87,23 +57,3 @@ rules:
         subscribe:
           - "#" 
           - "+/#"
-
-  # 5) Rate-Limiting Rules
-  # Prevent DoS and resource exhaustion.
-  rate_limiting:
-    - id: "RATE-001"
-      name: "Global sensor message quota"
-      action: drop
-      client_id_regex: "^sensor-.*"
-      quota:
-        max_messages: 50
-        time_window: "1s"
-
-    - id: "RATE-002"
-      name: "Strict limit on connection attempts (Prevent CONNECT floods)"
-      action: delay # Tarpit/Delay the connection rather than outright dropping
-      packet_type: "CONNECT"
-      ip_range: "0.0.0.0/0"
-      quota:
-        max_messages: 10
-        time_window: "1m"

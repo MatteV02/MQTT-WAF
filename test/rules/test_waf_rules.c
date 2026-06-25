@@ -1,3 +1,14 @@
+/**
+ * @file test_waf_rules.c
+ * @brief Unit tests for the WAF rules parser and compiler.
+ *
+ * @defgroup waf_rules_tests Rules Parser Unit Tests
+ * @brief Unit tests for the WAF rules parser and compiler.
+ * @ingroup rules_tests
+ *
+ * @{
+ */
+
 #include <CUnit/Basic.h>
 
 #include "rules/waf_rules_parse.h"
@@ -10,6 +21,9 @@ extern void free_waf_rules(struct waf_config *config);
  * TEST CASES
  * --------------------------------------------------------- */
 
+/**
+ * @brief Tests the parser's ability to successfully load a fully valid config file.
+ */
 void test_valid_configuration(void) {
     struct waf_config *config = load_waf_rules("test/rules/assets/test_valid.yaml");
     CU_ASSERT_PTR_NOT_NULL_FATAL(config);
@@ -39,6 +53,9 @@ void test_valid_configuration(void) {
     free_waf_rules(config);
 }
 
+/**
+ * @brief Verifies that default values are populated correctly when missing from the YAML.
+ */
 void test_defaults_application(void) {
     struct waf_config *config = load_waf_rules("test/rules/assets/test_default.yaml");
     CU_ASSERT_PTR_NOT_NULL_FATAL(config);
@@ -64,12 +81,18 @@ void test_defaults_application(void) {
     free_waf_rules(config);
 }
 
+/**
+ * @brief Asserts that the parser properly aborts and cleans up memory if regex compilation fails.
+ */
 void test_invalid_regex_aborts_loading(void) {
     /* Should fail during compile_rule_regexes, clean up, and return NULL */
     struct waf_config *config = load_waf_rules("test/rules/assets/test_invalid_regex.yaml");
     CU_ASSERT_PTR_NULL(config);
 }
 
+/**
+ * @brief Ensures the loading function returns NULL gracefully for missing files.
+ */
 void test_file_not_found(void) {
     /* Should fail gracefully on cyaml_load_file and return NULL */
     struct waf_config *config = load_waf_rules("non_existent_file_12345.yaml");
@@ -118,3 +141,5 @@ int main() {
     
     return failures;
 }
+
+/** @} */

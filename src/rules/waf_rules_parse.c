@@ -1,3 +1,10 @@
+/**
+ * @file waf_rules_parse.h
+ * @brief WAF rules parsing data structures and function prototypes.
+ *
+ * @ingroup waf_rules_parse
+ */
+
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdarg.h>
@@ -147,6 +154,13 @@ static const cyaml_schema_value_t top_level_schema = {
     CYAML_VALUE_MAPPING(CYAML_FLAG_POINTER, struct waf_config, top_level_fields)
 };
 
+/**
+ * @brief Custom logger callback for libcyaml operations.
+ * * @param level The severity level of the log message.
+ * @param ctx Context pointer (typically a file pointer like stderr).
+ * @param fmt Format string for the log message.
+ * @param args Variadic arguments for the format string.
+ */
 static void waf_cyaml_log(cyaml_log_t level, void *ctx, const char *fmt, va_list args) {
     // Default to stderr if ctx is NULL
     FILE *out = (ctx != NULL) ? (FILE *)ctx : stderr;
@@ -168,6 +182,15 @@ static const cyaml_config_t cyaml_config = {
 /* ---------------------------------------------------------
  * HELPER: REGEX COMPILER
  * --------------------------------------------------------- */
+
+/**
+ * @brief Helper to safely compile a single regex pattern.
+ * * @param compiled Pointer to the regex_t structure where the compiled result will be stored.
+ * @param pattern The raw regular expression string.
+ * @param rule_id The ID of the rule (used for error logging).
+ * @param rule_type The type/category of the rule (used for error logging).
+ * @return true if compilation was successful, false otherwise.
+ */
 static bool compile_single_regex(regex_t *compiled, const char *pattern, const char *rule_id, const char *rule_type) {
     /* REG_EXTENDED for modern regex syntax, REG_NOSUB because we don't need extraction */
     int err = regcomp(compiled, pattern, REG_EXTENDED | REG_NOSUB);
@@ -181,6 +204,12 @@ static bool compile_single_regex(regex_t *compiled, const char *pattern, const c
     return true;
 }
 
+/**
+ * @brief Iterates over all parsed rules and compiles their regular expressions.
+ * * Validates and compiles `client_id_regex` and `payload_regex` fields across all rules.
+ * * @param config Pointer to the fully loaded waf_config struct.
+ * @return 0 on success, -1 if any regular expression fails to compile.
+ */
 static int compile_rule_regexes(struct waf_config *config) {
     /* Initialize all has_regex flags to false first, ensuring safe cleanup if we fail halfway */
     for (unsigned i = 0; i < config->rules.connection_count; i++) config->rules.connection[i].has_client_id_regex = false;
@@ -230,7 +259,12 @@ static int compile_rule_regexes(struct waf_config *config) {
 /* ---------------------------------------------------------
  * HELPER: APPLY DEFAULT VALUES
  * --------------------------------------------------------- */
-static void apply_default_values(struct waf_config *config) {
+
+/**
+ * @brief Hydrates missing optional fields in the config structure with system defaults.
+ * * @param config Pointer to the fully loaded waf_config struct.
+ */
+ static void apply_default_values(struct waf_config *config) {
     if (!config) return;
 
     /* Global Defaults */

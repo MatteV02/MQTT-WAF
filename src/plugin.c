@@ -73,6 +73,8 @@ int callback_acl_check(int event, void *event_data, void *userdata) {
     // 1. Run the request through the WAF engine FIRST
     int waf_decision = firewall_engine(msg, waf_rules);
 
+    log_message(msg);
+
     if (waf_decision == 0) {
         // WAF Denied: Destroy the packet immediately.
         mosquitto_log_printf(MOSQ_LOG_WARNING, 
@@ -82,8 +84,6 @@ int callback_acl_check(int event, void *event_data, void *userdata) {
         return MOSQ_ERR_ACL_DENIED; 
     } 
 
-    log_message(msg);
-    
     // 2. WAF Approved
     mosquitto_log_printf(MOSQ_LOG_INFO, 
         "WAF [ALLOW]: Approved packet (Access: %d) from Client: '%s' on Topic: '%s'", 

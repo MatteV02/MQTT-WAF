@@ -24,7 +24,7 @@ rules:
       action: drop
       topics: 
         - "#"  # Apply to all topics
-      payload_regex: "(?i)(UNION.*SELECT|DROP.*TABLE|DELETE.*FROM)"
+      payload_regex: "UNION.*SELECT|DROP.*TABLE|DELETE.*FROM"
       log: true # Flag to trigger WAF alerting
 
     - id: "MSG-002"

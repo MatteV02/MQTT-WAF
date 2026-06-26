@@ -100,6 +100,10 @@ int callback_acl_check(int event, void *event_data, void *userdata) {
         if (ext_client_pub) {
             publish_forward(ext_client_pub, msg);
         }
+    } else if (msg->access == MOSQ_ACL_UNSUBSCRIBE) {
+        if (ext_client_sub) {
+            mosquitto_unsubscribe(ext_client_sub, NULL, topic);
+        }
     }
 
     // 4. Finally, grant actual access in the broker
@@ -167,8 +171,9 @@ int mosquitto_plugin_init(mosquitto_plugin_id_t *identifier, void **user_data, s
     if (status) {
         mosquitto_log_printf(MOSQ_LOG_ERR, "Logger Plugin: Cannot open /tmp/mqtt_packets.log");
         free_settings(plugin_config);
-        free_waf_rules(waf_rules);
         plugin_config = NULL;
+        free_waf_rules(waf_rules);
+        waf_rules = NULL;
         return MOSQ_ERR_UNKNOWN;
     }
 

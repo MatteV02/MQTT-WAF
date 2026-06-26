@@ -1,5 +1,5 @@
 /**
- * @file firewall_engine.h
+ * @file firewall_engine.c
  * @brief Implementation of the core firewall evaluation engine.
  * * This header defines the main entry point for evaluating Mosquitto ACL 
  * events against the configured Web Application Firewall (WAF) rules.
@@ -35,7 +35,7 @@ int firewall_engine(struct mosquitto_evt_acl_check *acl, struct waf_config *rule
     }
 
     // If topic_action == 1 (allow) or -1 (no match), continue to payload inspection
-    if (acl->access == MOSQ_ACL_WRITE || acl->access == MOSQ_ACL_READ) {
+    if (acl->access == MOSQ_ACL_WRITE) {
         int message_action = evaluate_message_rules(acl->topic, acl->payload, acl->payloadlen, rules->rules.message, rules->rules.message_count);
         if (message_action == 0) return 0; // Explicitly block malicious payload
         if (message_action == 1) return 1; // Explicitly allow based on payload rule

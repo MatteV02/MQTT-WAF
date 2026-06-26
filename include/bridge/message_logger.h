@@ -17,19 +17,19 @@
 #include <mosquitto_broker.h>
 
 /**
- * @brief Initializes the message logger.
- * * Opens the log file (typically "/tmp/mqtt_packets.log") in append mode.
- * * @return 0 on successful initialization, -1 if the log file cannot be opened.
- */
-void log_message(struct mosquitto_evt_acl_check* msg);
-
-/**
  * @brief Logs the details of an MQTT message to the log file.
  * * Extracts the topic, QoS, retain flag, payload length, and raw payload 
  * from the provided Mosquitto event structure. The data is written to the 
  * file and the stream is flushed immediately to ensure persistence.
  * * @param msg Pointer to the mosquitto_evt_acl_check structure containing 
  * the intercepted message data. Safe to pass NULL (it will be ignored).
+ */
+void log_message(struct mosquitto_evt_acl_check* msg);
+
+/**
+ * @brief Initializes the message logger.
+ * * Opens the log file (typically "/tmp/mqtt_packets.log") in append mode.
+ * * @return 0 on successful initialization, -1 if the log file cannot be opened.
  */
 int start_logger();
 

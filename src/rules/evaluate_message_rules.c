@@ -24,6 +24,8 @@ int evaluate_message_rules(const char *topic, const void *payload, int payloadle
         // A. Check Topic Match
         bool topic_matched = false;
         for (unsigned j = 0; j < m_rule->topics_count; j++) {
+            if (!m_rule->topics[j]) continue;
+
             // Check exact string match
             if (strcmp(topic, m_rule->topics[j]) == 0) {
                 topic_matched = true;
@@ -45,6 +47,11 @@ int evaluate_message_rules(const char *topic, const void *payload, int payloadle
             bool is_match = false;
 
             if (payloadlen > 0) {
+                if (payload == NULL) {
+                    mosquitto_log_printf(MOSQ_LOG_ERR, "WAF: Malformed packet (NULL payload with >0 length).");
+                    return 0; // Drop packet
+                }
+
                 // MQTT payloads are raw buffers. If the data contains null characters it cannot be interpreted as string, since it should be blocked,
                 if (memchr(payload, '\0', payloadlen)) {
                     mosquitto_log_printf(MOSQ_LOG_ERR, "WAF: Payload contains null byte.");

@@ -1,5 +1,5 @@
 /**
- * @file evaluate_topic_rules.h
+ * @file evaluate_topic_rules.c
  * @brief Header file for evaluating topic-based firewall rules.
  * 
  * @ingroup evaluate_topic_rules
@@ -39,7 +39,11 @@ int evaluate_topic_rules(const char *client_id, int access, const char *topic, s
             topic_count = t_rule->permissions.subscribe_count;
         }
 
+        if (!topic_array) continue;
+        if (!topic_count) continue;
+
         for (unsigned j = 0; j < topic_count; j++) {
+            if (!topic_array[j]) continue;
             if (strcmp(topic, topic_array[j]) == 0) {
                 topic_matched = true;
                 break;

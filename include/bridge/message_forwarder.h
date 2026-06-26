@@ -16,13 +16,22 @@
 #include <mosquitto.h>
 
 /**
- * @brief Intitialize a Mosquitto client, connect to a certain host and port and set it up to forward messages in input and output.
+ * @brief Intitialize a Mosquitto client configured for forwarding subscription messages only, connect to a certain host and port and set it up to forward messages in input and output.
  * @param client_id String id of the client
  * @param host hostname/ip of the destination
  * @param port port number
  * @return Pointer to the Mosquitto client, NULL if initialization fails.
  */
-struct mosquitto * start_forwarder(char* client_id, char* host, int port);
+struct mosquitto * start_subscription_forwarder(const char* client_id, const char *host, int port);
+
+/**
+ * @brief Intitialize a Mosquitto client configured for forwarding published messages only, connect to a certain host and port and set it up to forward messages in input and output.
+ * @param client_id String id of the client
+ * @param host hostname/ip of the destination
+ * @param port port number
+ * @return Pointer to the Mosquitto client, NULL if initialization fails.
+ */
+struct mosquitto * start_publish_forwarder(const char* client_id, const char *host, int port);
 
 /**
  * @brief Forward outgoing messages.
@@ -60,7 +69,14 @@ int subscription_forward(struct mosquitto *ext_client, const char *topic);
  * 
  * @param ext_client Mosquitto client
  */
-void stop_forwarder(struct mosquitto * ext_client);
+void stop_subscription_forwarder(struct mosquitto ** ext_client_ptr);
+
+/**
+ * @brief Free mosquitto client initialized with start_forwarder.
+ * 
+ * @param ext_client Mosquitto client
+ */
+void stop_publish_forwarder(struct mosquitto ** ext_client_ptr);
 
 #endif
 

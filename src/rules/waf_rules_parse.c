@@ -97,7 +97,9 @@ static const cyaml_schema_value_t top_level_schema = {
  */
 static void waf_cyaml_log(cyaml_log_t level, void *ctx, const char *fmt, va_list args) {
     mosquitto_log_printf(MOSQ_LOG_ERR, "[WAF Parser] ");
-    mosquitto_log_printf(MOSQ_LOG_ERR, fmt, args);
+    char buf[1024];
+    vsnprintf(buf, sizeof(buf), fmt, args);
+    mosquitto_log_printf(MOSQ_LOG_ERR, "%s", buf);
 }
 
 /* libcyaml Logging & Allocator Config */
@@ -174,17 +176,20 @@ static int compile_rule_regexes(struct waf_config *config) {
  * @brief Hydrates missing optional fields in the config structure with system defaults.
  * * @param config Pointer to the fully loaded waf_config struct.
  */
- static void apply_default_values(struct waf_config *config) {
-    if (!config) return;
+ static int apply_default_values(struct waf_config *config) {
+    if (!config) return -1;
 
     /* Global Defaults */
-    if (!config->default_policies.publish)        config->default_policies.publish = strdup("allow");
-    if (!config->default_policies.subscribe)      config->default_policies.subscribe = strdup("allow");
+    if (!config->default_policies.publish)      config->default_policies.publish = strdup("allow");
+    if (!config->default_policies.publish)      return -1;
+    if (!config->default_policies.subscribe)    config->default_policies.subscribe = strdup("allow");
+    if (!config->default_policies.subscribe)    return -1;
 
     /* Message Rules */
     for (unsigned i = 0; i < config->rules.message_count; i++) {
         struct message_rule *r = &config->rules.message[i];
         if (!r->action) r->action = strdup("allow");
+        if (!r->action) return -1;
 
         // r->payload_regex defaults to NULL. We leave it as NULL. 
         // Our compile_rule_regexes() function already checks `if (r->payload_regex)` 
@@ -197,11 +202,14 @@ static int compile_rule_regexes(struct waf_config *config) {
     for (unsigned i = 0; i < config->rules.topic_count; i++) {
         struct topic_rule *r = &config->rules.topic[i];
         if (!r->action) r->action = strdup("allow");
+        if (!r->action) return -1;
 
         // r->permissions mapping: 
         // If omitted, publish_count and subscribe_count are naturally 0, 
         // and their string arrays are NULL. This safely evaluates to "no explicit permissions defined".
     }
+
+    return 0;
 }
 
 /* ---------------------------------------------------------
@@ -222,11 +230,15 @@ struct waf_config* load_waf_rules(const char *filepath) {
     }
 
     /* Apply default values */
-    apply_default_values(config);
+    if (apply_default_values(config)) {
+        mosquitto_log_printf(MOSQ_LOG_ERR, "[WAF ERROR] Failed to apply default values.\n");
+        free_waf_rules(config);
+        return NULL;
+    }
 
     /* Compile Regexes Post-Parse */
     if (compile_rule_regexes(config) != 0) {
-        /* A regex failed to compile. Clean up and abort. */
+        mosquitto_log_printf(MOSQ_LOG_ERR, "[WAF ERROR] Failed to compile regex.\n");
         free_waf_rules(config);
         return NULL;
     }

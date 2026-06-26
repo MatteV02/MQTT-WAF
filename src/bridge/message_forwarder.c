@@ -80,42 +80,64 @@ static void on_subscription_message_received(struct mosquitto *client, void *use
     );
 }
 
-struct mosquitto * start_forwarder(char* client_id, char *host, int port) {
-    mosquitto_lib_init();
-    
-    struct mosquitto * ext_client = mosquitto_new(client_id, true, NULL);
-    if (!ext_client) {
-        mosquitto_log_printf(MOSQ_LOG_ERR, "Logger Plugin: Failed to create external MQTT client");
-        return ext_client;
+/* ---------------------------------------------------------
+ * INTERNAL HELPER
+ * --------------------------------------------------------- */
+static struct mosquitto * _init_client(const char* client_id, const char *host, int port, const char* role) {
+    struct mosquitto * client = mosquitto_new(client_id, true, NULL);
+    if (!client) {
+        mosquitto_log_printf(MOSQ_LOG_ERR, "Bridge: Failed to create %s client (%s)", role, client_id);
+        return NULL;
     }
 
-    int rc = mosquitto_connect_async(ext_client, host, port, 60);
+    int rc = mosquitto_connect_async(client, host, port, 60);
     if (rc != MOSQ_ERR_SUCCESS) {
-        mosquitto_log_printf(MOSQ_LOG_ERR, "Logger Plugin: Failed to init connection to external broker");
+        mosquitto_log_printf(MOSQ_LOG_ERR, "Bridge: Failed to connect %s to external broker", role);
     } else {
-        // mosquitto_loop_start creates a background thread to handle network I/O
-        mosquitto_loop_start(ext_client);
-        mosquitto_log_printf(MOSQ_LOG_INFO, "Logger Plugin: Forwarder started (%s:%d)", host, port);
+        mosquitto_loop_start(client);
+        mosquitto_log_printf(MOSQ_LOG_INFO, "Bridge: %s started %s (%s:%d)", role, client_id, host, port);
     }
-
-    // start subscription listener
-    if (ext_client) {
-        mosquitto_message_callback_set(ext_client, on_subscription_message_received);
-    }
-
-    return ext_client;
+    return client;
 }
 
-void stop_forwarder(struct mosquitto * ext_client) {
-    if (ext_client) {
-        /* Unregister the message callback by passing NULL */
+/* ---------------------------------------------------------
+ * PUBLISHER LIFECYCLE
+ * --------------------------------------------------------- */
+struct mosquitto * start_publish_forwarder(const char* client_id, const char *host, int port) {
+    return _init_client(client_id, host, port, "Publisher");
+}
+
+void stop_publish_forwarder(struct mosquitto ** ext_client_ptr) {
+    if (ext_client_ptr && *ext_client_ptr) {
+        struct mosquitto *ext_client = *ext_client_ptr;
+        mosquitto_disconnect(ext_client);
+        mosquitto_loop_stop(ext_client, true); 
+        mosquitto_destroy(ext_client);
+        *ext_client_ptr = NULL; 
+    }
+}
+
+/* ---------------------------------------------------------
+ * SUBSCRIBER LIFECYCLE
+ * --------------------------------------------------------- */
+struct mosquitto * start_subscription_forwarder(const char* client_id, const char *host, int port) {
+    struct mosquitto * client = _init_client(client_id, host, port, "Subscriber");
+    if (client) {
+        // Attach the listener callback only to the subscriber
+        mosquitto_message_callback_set(client, on_subscription_message_received);
+    }
+    return client;
+}
+
+void stop_subscription_forwarder(struct mosquitto ** ext_client_ptr) {
+    if (ext_client_ptr && *ext_client_ptr) {
+        struct mosquitto *ext_client = *ext_client_ptr;
         mosquitto_message_callback_set(ext_client, NULL);
         mosquitto_disconnect(ext_client);
-        mosquitto_loop_stop(ext_client, true); // wait for the network thread to finish gracefully
+        mosquitto_loop_stop(ext_client, true); 
         mosquitto_destroy(ext_client);
-        ext_client = NULL;
+        *ext_client_ptr = NULL; 
     }
-    mosquitto_lib_cleanup();
 }
 
 /** @} */

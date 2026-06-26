@@ -24,30 +24,43 @@ int init_forwarder_suite(void) { return 0; }
 int clean_forwarder_suite(void) { return 0; }
 
 /**
- * @brief Test start and stop functionality.
- * * @test Verifies that the external client object is created, the background 
- * thread starts, and it shuts down cleanly without hanging.
+ * @brief Test start and stop functionality for the publisher.
+ * @test Verifies that the publishing client is created and shut down cleanly, 
+ * ensuring the pointer is successfully nullified.
  */
-void test_start_stop_forwarder(void) {
-    // Attempt an async connection to localhost
-    struct mosquitto *ext_client = start_forwarder("test_forwarder", "localhost", 1883);
+void test_start_stop_publish_forwarder(void) {
+    struct mosquitto *ext_client = start_publish_forwarder("test_pub_forwarder", "localhost", 1883);
     
     // Ensure the client object was instantiated
     CU_ASSERT_PTR_NOT_NULL(ext_client);
     
-    // Cleanly stop the background thread and destroy the client
-    stop_forwarder(ext_client);
+    // Cleanly stop and verify the double-pointer nullification works
+    stop_publish_forwarder(&ext_client);
+    CU_ASSERT_PTR_NULL(ext_client);
+}
 
-    CU_PASS("Message forwarder started and stopped successfully.");
+/**
+ * @brief Test start and stop functionality for the subscriber.
+ * @test Verifies that the subscribing client is created and shut down cleanly.
+ */
+void test_start_stop_subscription_forwarder(void) {
+    struct mosquitto *ext_client = start_subscription_forwarder("test_sub_forwarder", "localhost", 1883);
+    
+    // Ensure the client object was instantiated
+    CU_ASSERT_PTR_NOT_NULL(ext_client);
+    
+    // Cleanly stop and verify the double-pointer nullification works
+    stop_subscription_forwarder(&ext_client);
+    CU_ASSERT_PTR_NULL(ext_client);
 }
 
 /**
  * @brief Test forwarding a valid standard message.
- * * @test Verifies that a normal message passes the internal checks and is 
+ * @test Verifies that a normal message passes the internal checks and is 
  * queued for publishing.
  */
 void test_forward_message_valid(void) {
-    struct mosquitto *ext_client = start_forwarder("test_forwarder", "localhost", 1883);
+    struct mosquitto *ext_client = start_publish_forwarder("test_pub_forwarder", "localhost", 1883);
     CU_ASSERT_PTR_NOT_NULL_FATAL(ext_client);
 
     // Mock a valid message
@@ -64,16 +77,15 @@ void test_forward_message_valid(void) {
     int rc = publish_forward(ext_client, &dummy_msg);
     CU_ASSERT_EQUAL(rc, 0);
 
-    stop_forwarder(ext_client);
+    stop_publish_forwarder(&ext_client);
 }
 
 /**
- * @brief Test forwarding a valid standard message.
- * * @test Verifies that a normal message passes the internal checks and is 
- * queued for publishing.
+ * @brief Test skipping of $SYS topics.
+ * @test Verifies that internal broker topics are ignored and not forwarded.
  */
 void test_forward_message_sys_topic(void) {
-    struct mosquitto *ext_client = start_forwarder("test_forwarder", "localhost", 1883);
+    struct mosquitto *ext_client = start_publish_forwarder("test_pub_forwarder", "localhost", 1883);
     CU_ASSERT_PTR_NOT_NULL_FATAL(ext_client);
 
     // Mock a $SYS message
@@ -85,19 +97,19 @@ void test_forward_message_sys_topic(void) {
     dummy_msg.qos = 0;
     dummy_msg.retain = false;
 
-    // Your code returns 0 when ignoring a $SYS topic
+    // The function should return 0 when ignoring a $SYS topic
     int rc = publish_forward(ext_client, &dummy_msg);
     CU_ASSERT_EQUAL(rc, 0);
 
-    stop_forwarder(ext_client);
+    stop_publish_forwarder(&ext_client);
 }
 
 /**
  * @brief Test handling of NULL pointers.
- * * @test Verifies that the plugin doesn't segfault if given null pointers.
+ * @test Verifies that the plugin doesn't segfault if given null pointers.
  */
 void test_forward_message_nulls(void) {
-    struct mosquitto *ext_client = start_forwarder("test_forwarder", "localhost", 1883);
+    struct mosquitto *ext_client = start_publish_forwarder("test_pub_forwarder", "localhost", 1883);
     CU_ASSERT_PTR_NOT_NULL_FATAL(ext_client);
 
     struct mosquitto_evt_acl_check dummy_msg;
@@ -113,7 +125,7 @@ void test_forward_message_nulls(void) {
     // Test missing topic within message
     CU_ASSERT_EQUAL(publish_forward(ext_client, &dummy_msg), -1);
 
-    stop_forwarder(ext_client);
+    stop_publish_forwarder(&ext_client);
 }
 
 /*
@@ -132,8 +144,9 @@ int main() {
         return CU_get_error();
     }
 
-    // Register all four tests
-    if (NULL == CU_add_test(pSuite, "test of start and stop forwarder", test_start_stop_forwarder) ||
+    // Register all tests
+    if (NULL == CU_add_test(pSuite, "test of publisher start and stop", test_start_stop_publish_forwarder) ||
+        NULL == CU_add_test(pSuite, "test of subscriber start and stop", test_start_stop_subscription_forwarder) ||
         NULL == CU_add_test(pSuite, "test of valid message forwarding", test_forward_message_valid) ||
         NULL == CU_add_test(pSuite, "test of $SYS topic ignore logic", test_forward_message_sys_topic) ||
         NULL == CU_add_test(pSuite, "test of NULL pointer handling", test_forward_message_nulls)) 
@@ -151,4 +164,4 @@ int main() {
     return exit_code;
 }
 
-/** @} */ // Ends the message_forwarder_tests group
+/** @} */

@@ -45,11 +45,17 @@ int evaluate_message_rules(const char *topic, const void *payload, int payloadle
             bool is_match = false;
 
             if (payloadlen > 0) {
+                // MQTT payloads are raw buffers. If the data contains null characters it cannot be interpreted as string, since it should be blocked,
+                if (memchr(payload, '\0', payloadlen)) {
+                    mosquitto_log_printf(MOSQ_LOG_ERR, "WAF: Payload contains null byte.");
+                    return 0;
+                }
+
                 // MQTT payloads are raw buffers. Copy and null-terminate for regexec().
                 char *payload_str = malloc(payloadlen + 1);
                 if (!payload_str) {
                     mosquitto_log_printf(MOSQ_LOG_ERR, "WAF: Memory allocation failed during payload evaluation");
-                    return -1; // Fail-safe fallback
+                    return 0; // Fail-safe fallback
                 }
                 
                 memcpy(payload_str, payload, payloadlen);

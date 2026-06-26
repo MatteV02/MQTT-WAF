@@ -25,13 +25,17 @@ int firewall_engine(struct mosquitto_evt_acl_check *acl, struct waf_config *rule
 
     int topic_action = evaluate_topic_rules(client_id, acl->access, acl->topic, rules->rules.topic, rules->rules.topic_count);
     
-    if (topic_action != -1) {
-        return topic_action; 
+    // If explicit deny, block immediately.
+    if (topic_action == 0) {
+        return 0; 
     }
 
-    int message_action = evaluate_message_rules(acl->topic, acl->payload, acl->payloadlen, rules->rules.message, rules->rules.message_count);
-    if (message_action != -1) {
-        return message_action; 
+    // If topic_action == 1 (allow) or -1 (no match), continue to payload inspection
+    if (acl->access == MOSQ_ACL_WRITE || acl->access == MOSQ_ACL_READ) {
+        int message_action = evaluate_message_rules(acl->topic, acl->payload, acl->payloadlen, rules->rules.message, rules->rules.message_count);
+        if (message_action != -1) {
+            return message_action; 
+        }
     }
 
     // ---------------------------------------------------------

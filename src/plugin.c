@@ -10,6 +10,7 @@
  */
 
 #include <string.h>
+#include <stdio.h>
 #include <mosquitto_broker.h>
 #include <mosquitto_plugin.h>
 #include <mosquitto.h>
@@ -27,9 +28,14 @@
 static mosquitto_plugin_id_t *plugin_id = NULL;
 
 /**
- * @brief External Mosquitto client used for forwarding approved messages.
+ * @brief External Mosquitto client used for forwarding approved publish messages.
  */
-static struct mosquitto *ext_client = NULL;
+static struct mosquitto *ext_client_pub = NULL;
+
+/**
+ * @brief External Mosquitto client used for forwarding approved subscription messages.
+ */
+static struct mosquitto *ext_client_sub = NULL;
 
 /**
  * @brief Global pointer for parsed YAML plugin settings.
@@ -75,6 +81,8 @@ int callback_acl_check(int event, void *event_data, void *userdata) {
             
         return MOSQ_ERR_ACL_DENIED; 
     } 
+
+    log_message(msg);
     
     // 2. WAF Approved
     mosquitto_log_printf(MOSQ_LOG_INFO, 
@@ -84,13 +92,13 @@ int callback_acl_check(int event, void *event_data, void *userdata) {
     // 3. Delegate to Bridge Logic ONLY if it's a valid, approved packet
     if (msg->access == MOSQ_ACL_SUBSCRIBE) {
         // forward a subscription
-        if (ext_client) {
-            subscription_forward(ext_client, topic);
+        if (ext_client_sub) {
+            subscription_forward(ext_client_sub, topic);
         }
     } else if (msg->access == MOSQ_ACL_WRITE) {
         // forward the published message
-        if (ext_client) {
-            publish_forward(ext_client, msg);
+        if (ext_client_pub) {
+            publish_forward(ext_client_pub, msg);
         }
     }
 
@@ -166,14 +174,27 @@ int mosquitto_plugin_init(mosquitto_plugin_id_t *identifier, void **user_data, s
 
     print_waf_rules(waf_rules);
 
-    // 4. Initialize the forwarder using parsed YAML settings
-    ext_client = start_forwarder(
-        plugin_config->ext_client_id, 
+    // 4. Initialize the distinct forwarders
+    char pub_id[256];
+    char sub_id[256];
+    snprintf(pub_id, sizeof(pub_id), "%s_pub", plugin_config->ext_client_id);
+    snprintf(sub_id, sizeof(sub_id), "%s_sub", plugin_config->ext_client_id);
+
+    // Explicitly start the Publisher
+    ext_client_pub = start_publish_forwarder(
+        pub_id, 
         plugin_config->ext_broker_host, 
         plugin_config->ext_broker_port
     );
     
-    if (!ext_client) {
+    // Explicitly start the Subscriber
+    ext_client_sub = start_subscription_forwarder(
+        sub_id, 
+        plugin_config->ext_broker_host, 
+        plugin_config->ext_broker_port
+    );
+    
+    if (!ext_client_pub || !ext_client_sub) {
         mosquitto_log_printf(MOSQ_LOG_ERR, "Logger Plugin: Failed to init connection to external broker");
         // TODO add a background retry logic to use the local broker as cache and then send message to the remote broker
     }
@@ -198,9 +219,10 @@ int mosquitto_plugin_init(mosquitto_plugin_id_t *identifier, void **user_data, s
  */
 int mosquitto_plugin_cleanup(void *user_data, struct mosquitto_opt *opts, int opt_count) {
     // Unregister the callback
-    mosquitto_callback_unregister(plugin_id, MOSQ_EVT_ACL_CHECK, callback_acl_check, NULL);
+    if (plugin_id) mosquitto_callback_unregister(plugin_id, MOSQ_EVT_ACL_CHECK, callback_acl_check, NULL);
 
-    stop_forwarder(ext_client);
+    stop_publish_forwarder(&ext_client_pub);
+    stop_subscription_forwarder(&ext_client_sub);
     stop_logger();
     
     // Clean up our parsed YAML settings from memory

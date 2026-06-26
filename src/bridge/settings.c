@@ -8,6 +8,7 @@
 #include <mosquitto.h>
 #include <mosquitto_broker.h>
 #include <string.h>
+#include <stdio.h>
 #include <cyaml/cyaml.h>
 #include <mosquitto_plugin.h>
 #include "bridge/settings.h"
@@ -16,7 +17,9 @@
 
 // Define a simple wrapper to route libcyaml logs to stderr
 void cyaml_log_stderr(cyaml_log_t level, void *ctx, const char *fmt, va_list args) {
-    mosquitto_log_printf(MOSQ_LOG_ERR, fmt, args);
+    char buf[1024];
+    vsnprintf(buf, sizeof(buf), fmt, args);
+    mosquitto_log_printf(MOSQ_LOG_ERR, "%s", buf);
 }
 
 // Define the schema for the struct fields
@@ -71,6 +74,10 @@ struct settings* parse_settings(const char* filename) {
     if (cfg->ext_broker_host == NULL) {
         // Use strdup so cyaml_free() can safely deallocate it later
         cfg->ext_broker_host = strdup("localhost");
+        if (!cfg->ext_broker_host) {
+            cyaml_free(&config, &settings_top_schema, cfg, 0);
+            return NULL;
+        }
     }
     
     // Missing integers will be 0
@@ -80,6 +87,10 @@ struct settings* parse_settings(const char* filename) {
     
     if (cfg->ext_client_id == NULL) {
         cfg->ext_client_id = strdup("default_client_id");
+        if (!cfg->ext_client_id) {
+            cyaml_free(&config, &settings_top_schema, cfg, 0);
+            return NULL;
+        }
     }
 
     return cfg;

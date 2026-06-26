@@ -5,16 +5,18 @@
  * @ingroup settings Bridge settings code unit
  */
 
-#include <stdio.h>
+#include <mosquitto.h>
+#include <mosquitto_broker.h>
 #include <string.h>
 #include <cyaml/cyaml.h>
+#include <mosquitto_plugin.h>
 #include "bridge/settings.h"
 
 #include <stdarg.h> // Required for va_list
 
 // Define a simple wrapper to route libcyaml logs to stderr
 void cyaml_log_stderr(cyaml_log_t level, void *ctx, const char *fmt, va_list args) {
-    vfprintf(stderr, fmt, args);
+    mosquitto_log_printf(MOSQ_LOG_ERR, fmt, args);
 }
 
 // Define the schema for the struct fields
@@ -59,7 +61,7 @@ struct settings* parse_settings(const char* filename) {
     err = cyaml_load_file(filename, &config, &settings_top_schema, (cyaml_data_t **)&cfg, NULL);
     
     if (err != CYAML_OK) {
-        fprintf(stderr, "libcyaml parsing error: %s\n", cyaml_strerror(err));
+        mosquitto_log_printf(MOSQ_LOG_ERR, "libcyaml parsing error: %s\n", cyaml_strerror(err));
         return NULL;
     }
 
@@ -77,7 +79,6 @@ struct settings* parse_settings(const char* filename) {
     }
     
     if (cfg->ext_client_id == NULL) {
-        // Use strdup here as well
         cfg->ext_client_id = strdup("default_client_id");
     }
 

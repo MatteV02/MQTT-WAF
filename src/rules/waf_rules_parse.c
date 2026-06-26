@@ -5,12 +5,15 @@
  * @ingroup waf_rules_parse
  */
 
+#include <mosquitto.h>
+#include <mosquitto_broker.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdarg.h>
 #include <cyaml/cyaml.h>
 #include <regex.h>
 #include <string.h>
+#include <mosquitto_plugin.h>
 
 #include "rules/waf_rules_parse.h"
 
@@ -93,12 +96,8 @@ static const cyaml_schema_value_t top_level_schema = {
  * @param args Variadic arguments for the format string.
  */
 static void waf_cyaml_log(cyaml_log_t level, void *ctx, const char *fmt, va_list args) {
-    // Default to stderr if ctx is NULL
-    FILE *out = (ctx != NULL) ? (FILE *)ctx : stderr;
-    
-    // Optional: Add a prefix so you know it came from the WAF parser
-    fprintf(out, "[WAF Parser] ");
-    vfprintf(out, fmt, args);
+    mosquitto_log_printf(MOSQ_LOG_ERR, "[WAF Parser] ");
+    mosquitto_log_printf(MOSQ_LOG_ERR, fmt, args);
 }
 
 /* libcyaml Logging & Allocator Config */
@@ -128,7 +127,7 @@ static bool compile_single_regex(regex_t *compiled, const char *pattern, const c
     if (err != 0) {
         char errbuf[256];
         regerror(err, compiled, errbuf, sizeof(errbuf));
-        fprintf(stderr, "[WAF ERROR] Failed to compile regex '%s' for %s rule '%s': %s\n",
+        mosquitto_log_printf(MOSQ_LOG_ERR, "[WAF ERROR] Failed to compile regex '%s' for %s rule '%s': %s\n",
                 pattern, rule_type, rule_id ? rule_id : "unknown", errbuf);
         return false;
     }
@@ -217,7 +216,7 @@ struct waf_config* load_waf_rules(const char *filepath) {
                                       (cyaml_data_t **)&config, NULL);
 
     if (err != CYAML_OK) {
-        fprintf(stderr, "[WAF ERROR] Failed to parse rule file %s: %s\n", 
+        mosquitto_log_printf(MOSQ_LOG_ERR, "[WAF ERROR] Failed to parse rule file %s: %s\n", 
                 filepath, cyaml_strerror(err));
         return NULL;
     }
@@ -262,30 +261,27 @@ void free_waf_rules(struct waf_config *config) {
 void print_waf_rules(struct waf_config *config) {
     if (!config) return;
 
-    printf("\n=========================================\n");
-    printf("         WAF CONFIGURATION LOADED        \n");
-    printf("=========================================\n");
-    printf("Version: %s\n\n", config->version ? config->version : "Unknown");
+    mosquitto_log_printf(MOSQ_LOG_INFO, "\n=========================================\n");
+    mosquitto_log_printf(MOSQ_LOG_INFO, "         WAF CONFIGURATION LOADED        \n");
+    mosquitto_log_printf(MOSQ_LOG_INFO, "=========================================\n");
+    mosquitto_log_printf(MOSQ_LOG_INFO, "Version: %s\n\n", config->version ? config->version : "Unknown");
 
-    printf("[Default Policies]\n");
-    printf("  Publish:    %s\n", config->default_policies.publish);
-    printf("  Subscribe:  %s\n\n", config->default_policies.subscribe);
+    mosquitto_log_printf(MOSQ_LOG_INFO, "[Default Policies]\n");
+    mosquitto_log_printf(MOSQ_LOG_INFO, "  Publish:    %s\n", config->default_policies.publish);
+    mosquitto_log_printf(MOSQ_LOG_INFO, "  Subscribe:  %s\n\n", config->default_policies.subscribe);
 
-    printf("\n[Message Rules] Count: %u\n", config->rules.message_count);
+    mosquitto_log_printf(MOSQ_LOG_INFO, "\n[Message Rules] Count: %u\n", config->rules.message_count);
     for (unsigned i = 0; i < config->rules.message_count; i++) {
         struct message_rule *r = &config->rules.message[i];
-        printf("  - %s [%s] -> %s\n", r->id, r->name, r->action);
-        printf("      Regex: %s (Compiled: %s)\n", r->payload_regex, r->has_payload_regex ? "Yes" : "No");
+        mosquitto_log_printf(MOSQ_LOG_INFO, "  - %s [%s] -> %s\n", r->id, r->name, r->action);
+        mosquitto_log_printf(MOSQ_LOG_INFO, "      Regex: %s (Compiled: %s)\n", r->payload_regex, r->has_payload_regex ? "Yes" : "No");
     }
 
-    printf("\n[Topic Rules] Count: %u\n", config->rules.topic_count);
+    mosquitto_log_printf(MOSQ_LOG_INFO, "\n[Topic Rules] Count: %u\n", config->rules.topic_count);
     for (unsigned i = 0; i < config->rules.topic_count; i++) {
         struct topic_rule *r = &config->rules.topic[i];
-        printf("  - %s [%s] -> %s\n", r->id, r->name, r->action);
+        mosquitto_log_printf(MOSQ_LOG_INFO, "  - %s [%s] -> %s\n", r->id, r->name, r->action);
     }
 
-    printf("=========================================\n\n");
-    
-    // Force flush stdout in case Mosquitto is running as a background daemon
-    fflush(stdout); 
+    mosquitto_log_printf(MOSQ_LOG_INFO, "=========================================\n\n");
 }
